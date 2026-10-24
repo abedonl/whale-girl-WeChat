@@ -20,6 +20,9 @@ venv/
 *.zip
 dist/
 release/
+release2/
+鲸鲸桌面版/
+.eb-cache/
 
 # 系统
 .DS_Store

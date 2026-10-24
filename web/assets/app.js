@@ -754,6 +754,50 @@ async function clearMemory() {
   }
 }
 
+/* ---------------- 微信桥接 ---------------- */
+async function openWechat() {
+  $('wechatModal').hidden = false;
+  await refreshWechatStatus();
+}
+
+async function refreshWechatStatus() {
+  const stateEl = $('wechatState');
+  const logEl = $('wechatLog');
+  stateEl.textContent = '查询中…';
+  try {
+    const res = await fetch('/api/wechat/status');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '状态接口异常');
+    const b = data.bridge || {};
+    if (b.running) {
+      const secs = b.startedAt ? Math.max(0, Math.floor((Date.now() - b.startedAt) / 1000)) : 0;
+      stateEl.textContent = `🟢 运行中（pid=${b.pid}，已 ${secs}s）`;
+    } else {
+      stateEl.textContent = '⚪ 未运行';
+    }
+    if (b.lastError) stateEl.textContent += ' · 错误：' + b.lastError;
+    logEl.textContent = (b.log && b.log.length) ? b.log.join('\n') : '（暂无输出）';
+    logEl.scrollTop = logEl.scrollHeight;
+  } catch (err) {
+    stateEl.textContent = '🔴 查询失败：' + err.message;
+  }
+}
+
+async function wechatAction(action) {
+  const stateEl = $('wechatState');
+  stateEl.textContent = action === 'start' ? '启动中…' : '停止中…';
+  try {
+    const res = await fetch(`/api/wechat/${action}`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '操作失败');
+    toast(action === 'start' ? '桥接已启动' : '桥接已停止');
+  } catch (err) {
+    toast((action === 'start' ? '启动失败：' : '停止失败：') + err.message);
+  } finally {
+    setTimeout(refreshWechatStatus, 800);
+  }
+}
+
 /* ---------------- 输入框 ---------------- */
 function autoGrow() {
   inputEl.style.height = 'auto';
@@ -783,6 +827,10 @@ function bindEvents() {
 
   $('btnSettings').addEventListener('click', openSettings);
   $('btnMemory').addEventListener('click', openMemory);
+  $('btnWechat').addEventListener('click', openWechat);
+  $('btnWechatStart').addEventListener('click', () => wechatAction('start'));
+  $('btnWechatStop').addEventListener('click', () => wechatAction('stop'));
+  $('btnWechatRefresh').addEventListener('click', refreshWechatStatus);
   $('saveSettings').addEventListener('click', saveSettings);
   $('clearMemory').addEventListener('click', clearMemory);
   $('btnAutoGroup').addEventListener('click', runAutoGroup);

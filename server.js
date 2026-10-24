@@ -27,6 +27,7 @@ const presets = require('./src/presets');
 const links = require('./src/links');
 const bilibili = require('./src/bilibili');
 const vision = require('./src/vision');
+const wechatBridge = require('./src/wechat-bridge');
 
 const VERSION = require('./package.json').version;
 const MAX_BODY = 2 * 1024 * 1024;
@@ -1008,6 +1009,22 @@ function createHandler(runtime) {
           applied: { id: preset.id, version: preset.version || '', name: preset.name || '' },
           persona: personaStore.summary(runtime.config),
         });
+      }
+
+      // 微信桥接：桌面端一键接入真实微信
+      if (pathname === '/api/wechat/status' && method === 'GET') {
+        return json(res, 200, { ok: true, bridge: wechatBridge.status() });
+      }
+      if (pathname === '/api/wechat/start' && method === 'POST') {
+        const result = await wechatBridge.start({
+          root: config.root || projectRoot(),
+          port: runtime.config.server.port,
+          logger: runtime.logger,
+        });
+        return json(res, result.ok ? 200 : 500, result);
+      }
+      if (pathname === '/api/wechat/stop' && method === 'POST') {
+        return json(res, 200, wechatBridge.stop({ logger: runtime.logger }));
       }
 
       if (pathname === '/api/config') {

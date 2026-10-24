@@ -40,6 +40,9 @@
         <a class="icon-btn" href="/debug" target="_blank" title="调试台：看主人、提示词原文、记忆">
           <span class="ico">🧪</span><em>调试</em>
         </a>
+        <button class="icon-btn" id="btnWechat" type="button" title="接入真实微信">
+          <span class="ico">💬</span><em>微信</em>
+        </button>
         <button class="icon-btn" id="btnSettings" type="button" title="设置 API Key">
           <span class="ico">⚙️</span><em>设置</em>
         </button>
@@ -168,6 +171,47 @@
       <div class="modal-foot">
         <button class="ghost" data-close="settingsModal" type="button">取消</button>
         <button class="primary" id="saveSettings" type="button">保存并唤醒鲸鲸</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 接入微信 -->
+  <div class="modal" id="wechatModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wechatTitle">
+      <div class="modal-head">
+        <h2 id="wechatTitle">💬 接入真实微信</h2>
+        <button class="close" data-close="wechatModal" type="button" aria-label="关闭">×</button>
+      </div>
+
+      <div class="field">
+        <label>桥接状态 <span class="val" id="wechatState">检查中…</span></label>
+        <p class="field-help">桥接是一个独立的 Python 小程序，监听你的微信窗口并把消息推给鲸鲸。需要本机已装 Python 3.10+ 和微信 Windows 版。</p>
+      </div>
+
+      <div class="test-row">
+        <button class="mini-btn" id="btnWechatStart" type="button">启动桥接</button>
+        <button class="mini-btn" id="btnWechatStop" type="button">停止</button>
+        <button class="mini-btn" id="btnWechatRefresh" type="button">刷新状态</button>
+      </div>
+
+      <div class="field">
+        <label>桥接日志</label>
+        <pre id="wechatLog" style="max-height:180px;overflow:auto;background:rgba(0,0,0,.25);padding:8px;border-radius:6px;font-size:12px;white-space:pre-wrap;">（暂无输出）</pre>
+      </div>
+
+      <details style="font-size:13px;color:#9ab;">
+        <summary>使用步骤</summary>
+        <ol style="margin:6px 0 0 18px;padding:0;">
+          <li>确保微信 Windows 版已登录</li>
+          <li>确保已装 Python 3.10+：<code>py --version</code></li>
+          <li>首次使用先装依赖：<code>pip install wechatauto-replica</code></li>
+          <li>点上面的「启动桥接」按钮</li>
+          <li>把微信窗口拖出来别被挡住，鲸鲸就会开始自动回复</li>
+        </ol>
+      </details>
+
+      <div class="modal-foot">
+        <button class="primary" data-close="wechatModal" type="button">完成</button>
       </div>
     </div>
   </div>
