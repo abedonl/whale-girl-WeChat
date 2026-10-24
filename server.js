@@ -1086,48 +1086,6 @@ function createHandler(runtime) {
         return json(res, 200, { ok: true, key, notes: sessions[mode], all: sessions, summary: storeSummary(runtime) });
       }
 
-      if (pathname === '/api/vision' && method === 'POST') {
-        try {
-          const body = await readBody(req);
-          const text = await vision.describe(runtime.config, {
-            imageBase64: body && body.image,
-            mime: (body && body.mime) || 'image/jpeg',
-            prompt: (body && body.prompt) || '',
-          });
-          return json(res, 200, { ok: true, text });
-        } catch (err) {
-          runtime.logger.warn('图片识别失败：' + (err && err.message));
-          return json(res, 500, { ok: false, error: String((err && err.message) || err) });
-        }
-      }
-
-      if (pathname === '/api/share' && method === 'GET') {
-        try {
-          const share = await shareForChat(runtime, url.searchParams.get('chat') || '');
-          return json(res, 200, share);
-        } catch (err) {
-          runtime.logger.warn('挑视频失败：' + (err && err.message));
-          return json(res, 500, { ok: false, error: String((err && err.message) || err) });
-        }
-      }
-
-      if (pathname === '/api/digest' && method === 'GET') {
-        const q = new URL(req.url, 'http://localhost');
-        const since = Number(q.searchParams.get('since') || 0);
-        const items = runtime.store.listDigest(since).slice(-120);
-        return json(res, 200, buildDigest(items));
-      }
-
-      if (pathname === '/api/persona' && method === 'GET') {
-        return json(res, 200, {
-          ok: true,
-          name: config.persona.name,
-          aliases: config.persona.aliases,
-          moods: persona.MOODS.map((m) => m.name),
-          greeting: '在，咋啦？今天想聊点啥',
-        });
-      }
-
       const webhookMatch = pathname.match(/^\/webhook\/([a-zA-Z]+)$/);
       if (webhookMatch) {
         const platform = webhookMatch[1].toLowerCase();

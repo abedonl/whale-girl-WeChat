@@ -41,6 +41,8 @@ class Store {
     this.sessions = new Map();
     this.dirty = false;
     this.saveTimer = null;
+    this._writing = false;     // 异步写盘进行中
+    this._needWrite = false;   // 写盘期间又变脏，需要再写一次
     this.stats = { messages: 0, replies: 0 };
     this.digest = [];
     this.load();
@@ -302,15 +304,48 @@ class Store {
     if (this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      this.flush();
+      this.flushAsync();
     }, SAVE_DEBOUNCE_MS);
     if (this.saveTimer.unref) this.saveTimer.unref();
   }
 
-  flush() {
+  /** 异步写盘：不阻塞事件循环，带写锁防止重入。 */
+  async flushAsync() {
+    if (this._writing) {
+      this._needWrite = true;
+      return;
+    }
     if (!this.dirty) return;
+    this._writing = true;
+    this.dirty = false; // 先清，写期间新的改动会重新把 dirty 设回 true
+    const payload = this._buildPayload();
+    try {
+      await fs.promises.mkdir(path.dirname(this.file), { recursive: true });
+      const tmp = this.file + '.tmp';
+      await fs.promises.writeFile(tmp, JSON.stringify(payload), 'utf8');
+      await fs.promises.rename(tmp, this.file);
+    } catch (err) {
+      this.dirty = true; // 失败则保持脏，等下一轮重试
+      this.logger && this.logger.error('保存记忆失败：' + err.message);
+    } finally {
+      this._writing = false;
+      if (this._needWrite || this.dirty) {
+        this._needWrite = false;
+        this.flushAsync();
+      }
+    }
+  }
+
+  _buildPayload() {
     const payload = { version: 1, savedAt: new Date().toISOString(), stats: this.stats, digest: this.digest, sessions: {} };
     for (const [key, sess] of this.sessions) payload.sessions[key] = sess;
+    return payload;
+  }
+
+  /** 同步写盘：测试与 close() 兜底用，保证退出前数据落盘。 */
+  flush() {
+    if (!this.dirty) return;
+    const payload = this._buildPayload();
     try {
       fs.mkdirSync(path.dirname(this.file), { recursive: true });
       const tmp = this.file + '.tmp';

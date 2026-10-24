@@ -1,31 +1,72 @@
 {
-    "name":  "whale-girl-bot",
-    "version":  "3.0.4",
-    "private":  false,
-    "description":  "鲸鲸 —— 可接微信群 / B 站分享的 DeepSeek 鲸鱼娘聊天机器人",
-    "main":  "server.js",
-    "type":  "commonjs",
-    "scripts":  {
-                    "start":  "node server.js",
-                    "doctor":  "node server.js --doctor",
-                    "test":  "node --test \"tests/*.test.js\"",
-                    "release-check":  "node scripts/release-check.js --release"
-                },
-    "engines":  {
-                    "node":  "\u003e=18"
-                },
-    "keywords":  [
-                     "deepseek",
-                     "chatbot",
-                     "wechat",
-                     "wechat-bot",
-                     "bilibili",
-                     "llm"
-                 ],
-    "license":  "MIT",
-    "author":  "",
-    "repository":  {
-                       "type":  "git",
-                       "url":  ""
-                   }
+    "name": "whale-girl-bot",
+    "version": "3.0.4",
+    "private": false,
+    "description": "鲸鲸 —— 可接微信群 / B 站分享的 DeepSeek 鲸鱼娘聊天机器人",
+    "main": "electron/main.js",
+    "type": "commonjs",
+    "scripts": {
+        "start": "electron .",
+        "server": "node server.js",
+        "doctor": "node server.js --doctor",
+        "test": "node --test \"tests/*.test.js\"",
+        "release-check": "node scripts/release-check.js --release",
+        "dist": "electron-builder --win portable"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "keywords": [
+        "deepseek",
+        "chatbot",
+        "wechat",
+        "wechat-bot",
+        "bilibili",
+        "llm"
+    ],
+    "license": "MIT",
+    "author": "",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "devDependencies": {
+        "electron": "^45.0.0",
+        "electron-builder": "^26.18.0"
+    },
+    "build": {
+        "appId": "com.whalegirl.bot",
+        "productName": "鲸鲸",
+        "directories": {
+            "output": "release2"
+        },
+        "asar": false,
+        "files": [
+            "server.js",
+            "package.json",
+            "src/**/*",
+            "web/**/*",
+            "electron/**/*",
+            "personas/**/*",
+            "resources/**/*",
+            "examples/**/*",
+            "scripts/**/*",
+            "docs/**/*",
+            "config.example.json",
+            "requirements.txt",
+            "*.md",
+            "*.bat"
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "portable",
+                    "arch": ["x64"]
+                }
+            ]
+        },
+        "portable": {
+            "artifactName": "鲸鲸-${version}-portable.exe"
+        }
+    }
 }
