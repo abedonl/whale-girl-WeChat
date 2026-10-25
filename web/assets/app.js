@@ -1,7 +1,7 @@
 'use strict';
 
 /* =========================================================
-   鲸鲸 · 前端逻辑（原生 JS，无依赖）
+   大肥鱼 · 前端逻辑（原生 JS，无依赖）
    ========================================================= */
 
 const $ = (id) => document.getElementById(id);
@@ -111,7 +111,7 @@ function addMessage({ role, name, text, time, error, caret }) {
 
   const nameEl = document.createElement('div');
   nameEl.className = 'name';
-  nameEl.textContent = role === 'bot' ? '鲸鲸' : name || '你';
+  nameEl.textContent = role === 'bot' ? '大肥鱼' : name || '你';
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
@@ -213,7 +213,7 @@ const CHIPS = {
     { t: '在吗', at: true },
     { t: '今天加班好累啊' },
     { t: '哈哈哈哈哈哈' },
-    { t: '鲸鲸你说呢' },
+    { t: '大肥鱼你说呢' },
     { t: '晚上吃啥' },
   ],
 };
@@ -225,10 +225,10 @@ function renderChips() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'chip';
-    btn.textContent = c.at ? '@鲸鲸 ' + c.t : c.t;
+    btn.textContent = c.at ? '@大肥鱼 ' + c.t : c.t;
     btn.addEventListener('click', () => {
       if (state.mode === 'group') {
-        sendMessage(c.at ? '@鲸鲸 ' + c.t : c.t);
+        sendMessage(c.at ? '@大肥鱼 ' + c.t : c.t);
       } else {
         sendMessage(c.t);
       }
@@ -245,8 +245,8 @@ function applyMode() {
   $('btnMode').classList.toggle('active', isGroup);
   $('btnMode').querySelector('em').textContent = isGroup ? '私聊' : '群聊';
   inputEl.placeholder = isGroup
-    ? '以群友身份说点什么…（打「鲸鲸」或点 @ 才会被接话）'
-    : '跟鲸鲸说点什么…（Enter 发送 / Shift+Enter 换行）';
+    ? '以群友身份说点什么…（打「大肥鱼」或点 @ 才会被接话）'
+    : '跟大肥鱼说点什么…（Enter 发送 / Shift+Enter 换行）';
   renderChips();
 }
 
@@ -356,7 +356,7 @@ async function sendMessage(rawText) {
 
     if (!gotAny && !full) {
       showTyping(false);
-      addMessage({ role: 'system', text: '（鲸鲸没有回应，可能是网络或接口问题）' });
+      addMessage({ role: 'system', text: '（大肥鱼没有回应，可能是网络或接口问题）' });
     }
   } catch (err) {
     showTyping(false);
@@ -373,22 +373,22 @@ async function sendMessage(rawText) {
 
 function ignoreReasonText(reason) {
   const map = {
-    not_addressed: '（鲸鲸没被叫到，只在旁边冒了个泡）',
-    duplicate: '（重复消息，鲸鲸跳过了）',
-    muted: '（鲸鲸闭麦中…@ 她试试）',
-    cooldown: '（鲸鲸刚说完，先歇一下）',
-    rate_limited: '（鲸鲸今天话有点多，先歇一下）',
+    not_addressed: '（大肥鱼没被叫到，只在旁边冒了个泡）',
+    duplicate: '（重复消息，大肥鱼跳过了）',
+    muted: '（大肥鱼闭麦中…@ 她试试）',
+    cooldown: '（大肥鱼刚说完，先歇一下）',
+    rate_limited: '（大肥鱼今天话有点多，先歇一下）',
     no_text: '（没有文字内容）',
   };
-  return map[reason] || `（鲸鲸没有接话：${reason}）`;
+  return map[reason] || `（大肥鱼没有接话：${reason}）`;
 }
 
 /* ---------------- 群友自动串门 ---------------- */
 const AUTO_SCRIPT = [
   { from: '阿螈', text: '今天加班到十点，人已经麻了' },
-  { from: '海胆酱', text: '@鲸鲸 你说人为什么要上班啊', at: true },
+  { from: '海胆酱', text: '@大肥鱼 你说人为什么要上班啊', at: true },
   { from: '小丑鱼', text: '哈哈哈哈哈哈哈' },
-  { from: '阿螈', text: '鲸鲸，安慰我一下' },
+  { from: '阿螈', text: '大肥鱼，安慰我一下' },
 ];
 
 let autoRunning = false;
@@ -414,7 +414,7 @@ async function streamForGroup(text, sender) {
   $('senderSel').value = sender;
   const isAt = /^@/.test(text);
   if (!isAt) {
-    // 非 @ 消息也走一次接口，让鲸鲸"旁听"（会被忽略）
+    // 非 @ 消息也走一次接口，让大肥鱼"旁听"（会被忽略）
     const payload = {
       text,
       mode: 'group',
@@ -559,6 +559,32 @@ async function openSettings() {
     $('freeChat').checked = data.group.freeChat;
     $('freeChance').value = Math.round((data.group.freeChatChance || 0) * 100);
     $('chanceVal').textContent = Math.round((data.group.freeChatChance || 0) * 100) + '%';
+    // 主动消息：按对象阈值
+    const pro = data.proactive || {};
+    if ($('proEnabled')) {
+      $('proEnabled').checked = Boolean(pro.enabled);
+      $('proQuietStart').value = pro.quietStart || '23:00';
+      $('proQuietEnd').value = pro.quietEnd || '08:00';
+      $('proPrompt').value = pro.prompt || '';
+      renderProTargets(Array.isArray(pro.targets) ? pro.targets : []);
+      $('proResult').textContent = '';
+      $('proResult').className = 'test-result';
+      // 真实微信会话下拉：选「指定会话」时直接挑，不用手打名字
+      try {
+        const sres = await fetch('/api/proactive/sessions');
+        const sdata = await sres.json();
+        const dl = $('proSessionList');
+        if (dl && sdata.ok) {
+          dl.textContent = '';
+          for (const s of sdata.sessions || []) {
+            const opt = document.createElement('option');
+            opt.value = s.title;
+            opt.textContent = (s.chatType === 'group' ? '群：' : '私聊：') + s.title;
+            dl.appendChild(opt);
+          }
+        }
+      } catch { /* 会话列表拉不到就手填，不影响 */ }
+    }
     // 看图 Key 的状态：能看出「配没配、配的是哪一把」，输入框永远不回显明文
     if ($('visionApiKey')) $('visionApiKey').value = '';
     if ($('visionState')) {
@@ -579,6 +605,86 @@ async function openSettings() {
   }
 }
 
+function renderProTargets(list) {
+  const box = $('proTargets');
+  if (!box) return;
+  box.textContent = '';
+  if (!list.length) list = [{ type: 'master', name: '', enabled: true, silentMinutes: 60, maxPerHour: 2, maxPerDay: 10 }];
+  for (const t of list) box.appendChild(proTargetRow(t));
+}
+
+function proTargetRow(t) {
+  const row = document.createElement('div');
+  row.className = 'pro-target';
+  row.innerHTML =
+    '<div class="pro-target-top">' +
+    '<select class="pro-type"><option value="master">主人</option><option value="chat">指定会话</option></select>' +
+    '<input class="pro-name" type="text" list="proSessionList" placeholder="备注名/群名" maxlength="60" />' +
+    '<label class="check pro-on"><input type="checkbox" class="pro-enabled" /> 启用</label>' +
+    '<button class="mini-btn pro-del" type="button">删</button>' +
+    '</div>' +
+    '<div class="pro-target-vals">' +
+    '沉默 <input class="pro-silent" type="number" min="5" max="1440" /> 分钟后找她 · ' +
+    '每小时最多 <input class="pro-hour" type="number" min="1" max="30" /> 条 · ' +
+    '每天最多 <input class="pro-day" type="number" min="1" max="100" /> 条' +
+    '</div>';
+  row.querySelector('.pro-type').value = t.type === 'master' ? 'master' : 'chat';
+  row.querySelector('.pro-name').value = t.name || '';
+  row.querySelector('.pro-enabled').checked = t.enabled !== false;
+  row.querySelector('.pro-silent').value = Number(t.silentMinutes) || 60;
+  row.querySelector('.pro-hour').value = Number(t.maxPerHour) || 2;
+  row.querySelector('.pro-day').value = Number(t.maxPerDay) || 10;
+  const syncName = () => {
+    row.querySelector('.pro-name').style.display = row.querySelector('.pro-type').value === 'chat' ? '' : 'none';
+  };
+  row.querySelector('.pro-type').addEventListener('change', syncName);
+  syncName();
+  row.querySelector('.pro-del').addEventListener('click', () => row.remove());
+  return row;
+}
+
+function collectProTargets() {
+  const box = $('proTargets');
+  if (!box) return [];
+  return [...box.querySelectorAll('.pro-target')].map((row) => ({
+    type: row.querySelector('.pro-type').value,
+    name: row.querySelector('.pro-name').value.trim(),
+    enabled: row.querySelector('.pro-enabled').checked,
+    silentMinutes: Number(row.querySelector('.pro-silent').value) || 60,
+    maxPerHour: Number(row.querySelector('.pro-hour').value) || 2,
+    maxPerDay: Number(row.querySelector('.pro-day').value) || 10,
+  })).filter((t) => t.type === 'master' || t.name);
+}
+
+async function showProStatus() {
+  const out = $('proResult');
+  out.className = 'test-result';
+  out.textContent = '读取中…';
+  try {
+    const res = await fetch('/api/proactive/status');
+    const data = await res.json();
+    const p = data.proactive || {};
+    const lines = (p.targets || []).map((t) => {
+      const bits = [];
+      if (t.silentForMinutes !== null) bits.push('已沉默 ' + t.silentForMinutes + ' 分钟');
+      if (t.snoozeUntil && t.snoozeUntil > Date.now()) bits.push('退避到 ' + new Date(t.snoozeUntil).toLocaleTimeString('zh-CN', { hour12: false }));
+      bits.push('今天已发 ' + t.sentToday + ' 条');
+      bits.push(t.ready ? '✅ 下一轮可发' : '暂不触发');
+      return `${t.title}（${t.type === 'master' ? '主人' : '会话'}）：` + bits.join('，');
+    });
+    const head =
+      (p.enabled ? (p.running ? '运行中' : '已启用但未运行') : '未启用') +
+      (p.inQuietHours ? ' · 现在是静默时段' : '');
+    const parts = [head];
+    if (p.reason) parts.push('⚠ ' + p.reason);
+    if (lines.length) parts.push(lines.join('\n'));
+    else if (!p.reason) parts.push('（没有匹配到任何微信会话）');
+    out.textContent = parts.join('\n');
+  } catch (err) {
+    out.textContent = '状态读取失败：' + err.message;
+  }
+}
+
 function settingsPayload() {
   const payload = {
     provider: $('provider').value,
@@ -593,6 +699,16 @@ function settingsPayload() {
       freeChatChance: Number($('freeChance').value) / 100,
     },
   };
+  // 主动消息：字段存在才提交（旧页面没有这一块）
+  if ($('proEnabled')) {
+    payload.proactive = {
+      enabled: $('proEnabled').checked,
+      quietStart: $('proQuietStart').value.trim(),
+      quietEnd: $('proQuietEnd').value.trim(),
+      prompt: $('proPrompt').value.trim(),
+      targets: collectProTargets(),
+    };
+  }
   const key = $('apiKey').value.trim();
   if (key) {
     payload.apiKey = key;
@@ -624,7 +740,7 @@ async function saveSettings() {
       state.vision = data.settings.vision;
     }
     if (state.status && !state.status.mock) {
-      addMessage({ role: 'system', text: `（鲸鲸浮上水面吸了口气：接下来用 ${data.settings.providerLabel || '新模型'} 说话啦）` });
+      addMessage({ role: 'system', text: `（大肥鱼浮上水面吸了口气：接下来用 ${data.settings.providerLabel || '新模型'} 说话啦）` });
       toast('已接入 ' + (data.settings.providerLabel || '模型') + '，跟她说句话试试~');
     } else {
       toast('已保存（当前是演示模式）');
@@ -633,7 +749,7 @@ async function saveSettings() {
     toast('保存失败：' + err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '保存并唤醒鲸鲸';
+    btn.textContent = '保存并唤醒大肥鱼';
   }
 }
 
@@ -692,7 +808,7 @@ async function testVision() {
       $('visionState').textContent = data.vision.configured ? '已保存 ' + (data.vision.keyMasked || '') : '（未配置）';
     }
     if (typed && $('visionState')) {
-      out.textContent += '（记得点「保存并唤醒鲸鲸」把 Key 存下来）';
+      out.textContent += '（记得点「保存并唤醒大肥鱼」把 Key 存下来）';
     }
     toast('看图通了');
   } catch (err) {
@@ -703,67 +819,47 @@ async function testVision() {
   }
 }
 
-/* ---------------- 记忆 ---------------- */
-async function openMemory() {
-  $('memoryModal').hidden = false;
-  const host = $('memoryList');
-  host.innerHTML = '<p class="empty">正在翻小本本…</p>';
-  try {
-    const res = await fetch(`/api/memory?sessionId=${encodeURIComponent(state.sessionId)}&mode=${state.mode}`);
-    const data = await res.json();
-    host.textContent = '';
-    const rows = data.notes || [];
-    if (!rows.length) {
-      host.innerHTML = '<p class="empty">小本本还是空的呀。试试说「记住：我怕黑」。</p>';
-      return;
-    }
-    for (const row of rows) {
-      const div = document.createElement('div');
-      div.className = 'person';
-      const strong = document.createElement('strong');
-      strong.textContent = row.name || row.uid;
-      const ul = document.createElement('ul');
-      for (const n of row.notes) {
-        const li = document.createElement('li');
-        li.textContent = n;
-        ul.appendChild(li);
-      }
-      div.appendChild(strong);
-      div.appendChild(ul);
-      host.appendChild(div);
-    }
-  } catch {
-    host.innerHTML = '<p class="empty">读取失败，服务还在吗？</p>';
-  }
-}
-
-async function clearMemory() {
-  try {
-    const res = await fetch('/api/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: state.sessionId, mode: state.mode }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || '失败');
-    $('memoryModal').hidden = true;
-    addMessage({ role: 'system', text: '（鲸鲸把这个聊天的记忆丢回海里了）' });
-    toast('记忆已清空');
-  } catch (err) {
-    toast('清空失败：' + err.message);
-  }
-}
-
 /* ---------------- 微信桥接 ---------------- */
+let wechatLogTimer = null;
+
 async function openWechat() {
   $('wechatModal').hidden = false;
   await refreshWechatStatus();
+  await refreshWechatPrecheck();
+  // 弹窗开着时每 2 秒拉一次日志，实现实时滚动
+  clearInterval(wechatLogTimer);
+  wechatLogTimer = setInterval(() => {
+    if ($('wechatModal').hidden) { clearInterval(wechatLogTimer); wechatLogTimer = null; return; }
+    refreshWechatStatus();
+  }, 2000);
+}
+
+async function refreshWechatPrecheck() {
+  const el = $('wechatPrecheck');
+  if (!el) return;
+  el.textContent = '正在检测 Python 环境…';
+  el.style.color = '#9ab';
+  try {
+    const res = await fetch('/api/wechat/precheck');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '预检失败');
+    const p = data.precheck || {};
+    if (p.ready) {
+      el.textContent = '✅ ' + (p.hint || '环境就绪');
+      el.style.color = '#7ddba8';
+    } else {
+      el.textContent = '⚠️ ' + (p.hint || '环境未就绪');
+      el.style.color = '#ffb86c';
+    }
+  } catch (err) {
+    el.textContent = '🔴 预检失败：' + err.message;
+    el.style.color = '#ff7a7a';
+  }
 }
 
 async function refreshWechatStatus() {
   const stateEl = $('wechatState');
   const logEl = $('wechatLog');
-  stateEl.textContent = '查询中…';
   try {
     const res = await fetch('/api/wechat/status');
     const data = await res.json();
@@ -772,14 +868,17 @@ async function refreshWechatStatus() {
     if (b.running) {
       const secs = b.startedAt ? Math.max(0, Math.floor((Date.now() - b.startedAt) / 1000)) : 0;
       stateEl.textContent = `🟢 运行中（pid=${b.pid}，已 ${secs}s）`;
+      stateEl.style.color = '#7ddba8';
     } else {
       stateEl.textContent = '⚪ 未运行';
+      stateEl.style.color = '#9ab';
     }
     if (b.lastError) stateEl.textContent += ' · 错误：' + b.lastError;
     logEl.textContent = (b.log && b.log.length) ? b.log.join('\n') : '（暂无输出）';
     logEl.scrollTop = logEl.scrollHeight;
   } catch (err) {
     stateEl.textContent = '🔴 查询失败：' + err.message;
+    stateEl.style.color = '#ff7a7a';
   }
 }
 
@@ -789,12 +888,25 @@ async function wechatAction(action) {
   try {
     const res = await fetch(`/api/wechat/${action}`, { method: 'POST' });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.error || '操作失败');
+    if (!data.ok) {
+      // 启动失败：把预检提示完整显示出来
+      const msg = data.error || '操作失败';
+      stateEl.textContent = '🔴 ' + msg;
+      stateEl.style.color = '#ff7a7a';
+      toast(msg, 6000);
+      await refreshWechatPrecheck();
+      return;
+    }
     toast(action === 'start' ? '桥接已启动' : '桥接已停止');
   } catch (err) {
-    toast((action === 'start' ? '启动失败：' : '停止失败：') + err.message);
+    const msg = (action === 'start' ? '启动失败：' : '停止失败：') + err.message;
+    stateEl.textContent = '🔴 ' + msg;
+    stateEl.style.color = '#ff7a7a';
+    toast(msg, 6000);
   } finally {
-    setTimeout(refreshWechatStatus, 800);
+    // 启动后立刻刷一次，3 秒后再刷一次（桥接可能秒退）
+    setTimeout(refreshWechatStatus, 500);
+    setTimeout(refreshWechatStatus, 3000);
   }
 }
 
@@ -821,18 +933,20 @@ function bindEvents() {
     applyMode();
     addMessage({
       role: 'system',
-      text: state.mode === 'group' ? '（切到群聊：深海鱼塘，选一个群友身份说话吧）' : '（切回私聊：只有你和鲸鲸）',
+      text: state.mode === 'group' ? '（切到群聊：深海鱼塘，选一个群友身份说话吧）' : '（切回私聊：只有你和大肥鱼）',
     });
   });
 
   $('btnSettings').addEventListener('click', openSettings);
-  $('btnMemory').addEventListener('click', openMemory);
   $('btnWechat').addEventListener('click', openWechat);
   $('btnWechatStart').addEventListener('click', () => wechatAction('start'));
   $('btnWechatStop').addEventListener('click', () => wechatAction('stop'));
   $('btnWechatRefresh').addEventListener('click', refreshWechatStatus);
   $('saveSettings').addEventListener('click', saveSettings);
-  $('clearMemory').addEventListener('click', clearMemory);
+  if ($('btnProAddTarget')) $('btnProAddTarget').addEventListener('click', () => {
+    $('proTargets').appendChild(proTargetRow({ type: 'chat', name: '', enabled: true, silentMinutes: 120, maxPerHour: 1, maxPerDay: 5 }));
+  });
+  if ($('btnProStatus')) $('btnProStatus').addEventListener('click', showProStatus);
   $('btnAutoGroup').addEventListener('click', runAutoGroup);
   $('btnTest').addEventListener('click', testConnection);
   const vBtn = $('btnVisionTest');
@@ -862,7 +976,7 @@ function bindEvents() {
   });
 
   $('btnAt').addEventListener('click', () => {
-    const prefix = '@鲸鲸 ';
+    const prefix = '@大肥鱼 ';
     if (!inputEl.value.includes(prefix)) inputEl.value = prefix + inputEl.value;
     inputEl.focus();
     inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
@@ -922,7 +1036,7 @@ async function boot() {
   if (state.mode === 'group') {
     addMessage({ role: 'system', text: '（深海鱼塘：点「让群友来串门」看看她在群里怎么接话）' });
   } else {
-    addMessage({ role: 'system', text: '（提示：被叫「鲸鲸」她就会理你；说「记住：…」她会记在小本本上）' });
+    addMessage({ role: 'system', text: '（提示：被叫「大肥鱼」她就会理你；说「记住：…」她会记在小本本上）' });
   }
 
   setInterval(() => refreshStatus().catch(() => {}), 30000);

@@ -1,4 +1,4 @@
-﻿# 鲸鲸 · 一键终止所有
+﻿# 大肥鱼 · 一键终止所有
 # 停掉：服务（8787）、微信桥接、桥接守护循环、启动器窗口、快捷键守护，并写 data\PAUSED 防止被自动拉起
 # 用法：双击 一键终止.bat，或 powershell -File scripts\stop-all.ps1
 param(
@@ -19,7 +19,7 @@ function Say($msg, $color = 'Gray') {
 
 Say ''
 Say '  ==========================================' 'Cyan'
-Say '    正在终止鲸鲸的所有进程' 'Cyan'
+Say '    正在终止大肥鱼的所有进程' 'Cyan'
 Say '  ==========================================' 'Cyan'
 Say ''
 
@@ -37,7 +37,7 @@ $patterns = @(
   @{ Match = 'bridge_loop.bat';      Label = '桥接守护循环' },
   @{ Match = '启动微信桥接.bat';      Label = '桥接启动窗口' },
   @{ Match = '启动鲸鱼娘.bat';        Label = '服务启动窗口' },
-  @{ Match = 'server.js';            Label = '鲸鲸服务' }
+  @{ Match = 'server.js';            Label = '大肥鱼服务' }
 )
 if (-not $KeepHotkey) {
   $patterns += @{ Match = 'hotkey_daemon.py'; Label = '快捷键守护' }

@@ -24,7 +24,6 @@ personas/
   "name": "显示用的人设名",
   "description": "这版改了什么",
   "preset": "正常",
-  "age": 20,
   "privateMaxChars": 140,
   "groupMaxChars": 70,
   "historyTurns": 100,

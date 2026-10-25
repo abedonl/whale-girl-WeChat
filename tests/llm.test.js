@@ -34,7 +34,7 @@ function makeClient(url, { apiKey = 'sk-test-1234567890' } = {}) {
       },
       paths: { settingsFile: path.join(os.tmpdir(), 'whale-settings-none-' + Math.random() + '.json') },
       env: {},
-      persona: { name: '鲸鲸' },
+      persona: { name: '大肥鱼' },
     },
   });
 }
@@ -52,7 +52,7 @@ test('非流式请求能拿到回复文本', async () => {
   });
   const client = makeClient(fake.url);
   const text = await client.complete({
-    system: '你是鲸鲸',
+    system: '你是大肥鱼',
     turns: [{ role: 'user', content: '在吗' }],
   });
   assert.equal(text, '咕噜~ 收到啦');

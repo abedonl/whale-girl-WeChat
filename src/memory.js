@@ -82,6 +82,11 @@ class Store {
         engagedBy: sess.state?.engagedBy || '',
         silentUntil: sess.state?.silentUntil || 0,
         replyTimes: Array.isArray(sess.state?.replyTimes) ? sess.state.replyTimes.slice(-200) : [],
+        // 主动消息：snoozeUntil = 对方说「别烦我」之类后的退避截止时间；sentTimes = 已发出的主动消息时间戳
+        proactive: {
+          snoozeUntil: Number(sess.state?.proactive?.snoozeUntil) || 0,
+          sentTimes: Array.isArray(sess.state?.proactive?.sentTimes) ? sess.state.proactive.sentTimes.slice(-200) : [],
+        },
       },
       seenIds: Array.isArray(sess.seenIds) ? sess.seenIds.slice(-200) : [],
     };
@@ -164,7 +169,7 @@ class Store {
     const sess = this.ensureSession(key);
     const entry = {
       role: message.role === 'assistant' ? 'assistant' : 'user',
-      name: trimText(message.name || (message.role === 'assistant' ? '鲸鲸' : '群友'), 60),
+      name: trimText(message.name || (message.role === 'assistant' ? '大肥鱼' : '群友'), 60),
       uid: message.uid ? String(message.uid).slice(0, 100) : '',
       text: trimText(message.text),
       ts: Number(message.ts) || Date.now(),
@@ -278,7 +283,7 @@ class Store {
     const sess = this.ensureSession(key);
     sess.messages = [];
     sess.seenIds = [];
-    sess.state = { mutedUntil: 0, lastReplyAt: 0, consecutiveReplies: 0, replyTimes: [], adminUntil: 0, discussUntil: 0, engagedUntil: 0, engagedBy: '', silentUntil: 0 };
+    sess.state = { mutedUntil: 0, lastReplyAt: 0, consecutiveReplies: 0, replyTimes: [], adminUntil: 0, discussUntil: 0, engagedUntil: 0, engagedBy: '', silentUntil: 0, proactive: { snoozeUntil: 0, sentTimes: [] } };
     this.markDirty();
   }
 

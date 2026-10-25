@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 鲸鲸 HTTP 服务：
+ * 大肥鱼 HTTP 服务：
  *   网页聊天界面（SSE 流式）
  *   /api/*  设置、状态、记忆
  *   /webhook/{wechat|douyin}  给微信/抖音中转服务回调
@@ -19,13 +19,13 @@ const { createLogger } = require('./src/logger');
 const { Store } = require('./src/memory');
 const { DeepSeekClient, LlmError } = require('./src/llm');
 const { Bot } = require('./src/bot');
+const { ProactiveManager } = require('./src/proactive');
 const { createGateways } = require('./src/adapters/gateway');
 const persona = require('./src/persona');
 const { matchMaster, masterWarnings } = require('./src/master');
 const personaStore = require('./src/personaStore');
 const presets = require('./src/presets');
 const links = require('./src/links');
-const bilibili = require('./src/bilibili');
 const vision = require('./src/vision');
 const wechatBridge = require('./src/wechat-bridge');
 
@@ -118,8 +118,11 @@ function createRuntime({ root = projectRoot(), env = process.env, loggerLevel } 
   const store = new Store({ file: config.paths.storeFile, limits: config.memory, logger });
   const llm = new DeepSeekClient({ config, logger });
   const bot = new Bot({ config, store, llm, logger });
+  const proactive = new ProactiveManager({ config, store, llm, logger });
+  bot.proactive = proactive;
+  proactive.start();
   const gateways = createGateways({ config, bot, logger });
-  const runtime = { config, logger, store, llm, bot, gateways, startedAt: Date.now(), version: VERSION };
+  const runtime = { config, logger, store, llm, bot, proactive, gateways, startedAt: Date.now(), version: VERSION };
   watchConfigFile(runtime);
   return runtime;
 }
@@ -159,6 +162,7 @@ function watchConfigFile(runtime) {
           JSON.parse(raw); // 先确认是合法 JSON，写坏了就别覆盖内存里的好配置
           mergeConfigInPlace(runtime.config, loadConfig({ root: runtime.config.root, env: runtime.config.env }));
           if (runtime.llm && typeof runtime.llm.reload === 'function') runtime.llm.reload();
+          if (runtime.proactive && typeof runtime.proactive.reload === 'function') runtime.proactive.reload();
           runtime.logger.info('config.json 已重新加载（改动已生效，不用重启）');
         } catch (err) {
           runtime.logger.warn(`config.json 改了但没读成功，先按老配置跑：${err && err.message}`);
@@ -175,152 +179,6 @@ function watchConfigFile(runtime) {
 /* ------------------------------------------------------------------ */
 /* 调试台：直接读写 config.json（改完立刻生效，不用重启）              */
 /* ------------------------------------------------------------------ */
-
-// 这些路径网页「⚙️ 设置」会写进 data/settings.json，而它的优先级高于 config.json
-const SETTINGS_SHADOW = {
-  provider: ['provider'],
-  'deepseek.provider': ['provider'],
-  'deepseek.apiKey': ['apiKey'],
-  'deepseek.baseUrl': ['baseUrl'],
-  'deepseek.model': ['model'],
-  'deepseek.temperature': ['temperature'],
-  'deepseek.mock': ['mock'],
-  'persona.ownerName': ['userName'],
-};
-
-// 密钥类：网页只显示「已设置 / 没配」，留空提交表示「不改」
-const SECRET_PATHS = new Set([
-  'deepseek.apiKey',
-  'vision.apiKey',
-  'voice.apiKey',
-  'gateway.wechat.inboundToken',
-  'gateway.douyin.inboundToken',
-]);
-
-function getByPath(obj, dotted) {
-  let cur = obj;
-  for (const part of String(dotted).split('.')) {
-    if (cur === null || typeof cur !== 'object') return undefined;
-    cur = cur[part];
-  }
-  return cur;
-}
-
-function setByPath(obj, dotted, value) {
-  const parts = String(dotted).split('.').filter(Boolean);
-  if (!parts.length) throw new Error('空的字段名');
-  for (const p of parts) {
-    if (p.startsWith('_') || p === '__proto__' || p === 'constructor' || p === 'prototype') {
-      throw new Error('不允许改这个字段：' + dotted);
-    }
-  }
-  let cur = obj;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    if (!isPlainObject(cur[parts[i]])) cur[parts[i]] = {};
-    cur = cur[parts[i]];
-  }
-  cur[parts[parts.length - 1]] = value;
-  return obj;
-}
-
-/** 按现有配置的类型把网页送来的值转成正确类型（数字/开关/数组/JSON） */
-function coerceValue(config, dotted, value) {
-  const cur = getByPath(config, dotted);
-  if (typeof cur === 'number') {
-    const n = typeof value === 'number' ? value : Number(String(value == null ? '' : value).trim());
-    if (!Number.isFinite(n)) throw new Error('「' + dotted + '」要填数字');
-    return n;
-  }
-  if (typeof cur === 'boolean') return value === true || value === 'true' || value === 1 || value === '1';
-  if (Array.isArray(cur)) {
-    if (Array.isArray(value)) return value.map((x) => String(x).trim()).filter(Boolean);
-    return String(value == null ? '' : value).split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
-  }
-  if (isPlainObject(cur)) {
-    if (isPlainObject(value)) return value;
-    try {
-      return JSON.parse(String(value));
-    } catch {
-      throw new Error('「' + dotted + '」要填合法的 JSON');
-    }
-  }
-  if (value === null || value === undefined) return '';
-  return String(value);
-}
-
-/** 给网页看的配置：去掉内部字段，密钥留空但告诉它「配没配」 */
-function publicConfig(config) {
-  const internal = new Set(['env', 'paths', 'root', 'configExists']);
-  const out = JSON.parse(JSON.stringify(config, (k, v) => (internal.has(k) ? undefined : v)));
-  const secrets = {};
-  for (const path of SECRET_PATHS) {
-    const v = getByPath(config, path);
-    secrets[path] = Boolean(v && String(v).trim());
-    try { setByPath(out, path, ''); } catch { /* 没有这段就算了 */ }
-  }
-  return { config: out, secrets };
-}
-
-/** 把 settings.json 里会「盖住」刚改的字段清掉，否则网页上改了 config.json 却不生效 */
-function clearSettingsShadow(runtime, paths) {
-  const file = runtime.config.paths.settingsFile;
-  let cur;
-  try {
-    cur = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')) || {};
-  } catch {
-    return [];
-  }
-  const cleared = [];
-  for (const path of paths) {
-    for (const key of SETTINGS_SHADOW[path] || []) {
-      if (Object.prototype.hasOwnProperty.call(cur, key)) {
-        delete cur[key];
-        cleared.push('settings.' + key);
-      }
-    }
-    if (path.startsWith('group.')) {
-      const gk = path.slice('group.'.length);
-      if (isPlainObject(cur.group) && Object.prototype.hasOwnProperty.call(cur.group, gk)) {
-        delete cur.group[gk];
-        cleared.push('settings.group.' + gk);
-        if (!Object.keys(cur.group).length) delete cur.group;
-      }
-    }
-  }
-  if (cleared.length) {
-    try { fs.writeFileSync(file, JSON.stringify(cur, null, 2), 'utf8'); } catch { /* 写不了就算了 */ }
-  }
-  return cleared;
-}
-
-/** 把网页提交的 { "persona.name": "新名字" } 写进 config.json 并立刻生效 */
-function applyConfigPatch(runtime, patch) {
-  if (!isPlainObject(patch)) throw new Error('patch 要是 { 字段名: 新值 } 这样的对象');
-  const file = runtime.config.paths.configFile;
-  let raw = {};
-  try {
-    raw = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '')) || {};
-  } catch {
-    raw = {};
-  }
-  const changed = [];
-  for (const [dotted, value] of Object.entries(patch)) {
-    const path = String(dotted || '').trim();
-    if (!path) continue;
-    // 密钥留空 = 不改（网页上看不到已存的 Key，不能一保存就把它清了）
-    if (SECRET_PATHS.has(path) && (value === '' || value === null || value === undefined)) continue;
-    setByPath(raw, path, coerceValue(runtime.config, path, value));
-    changed.push(path);
-  }
-  if (!changed.length) return { changed, cleared: [] };
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(raw, null, 2) + '\n', 'utf8');
-  const cleared = clearSettingsShadow(runtime, changed);
-  mergeConfigInPlace(runtime.config, loadConfig({ root: runtime.config.root, env: runtime.config.env }));
-  if (runtime.llm && typeof runtime.llm.reload === 'function') runtime.llm.reload();
-  runtime.logger.info(`调试台保存了设置：${changed.join('、')}${cleared.length ? `（同时清了 ${cleared.join('、')}，让改动真的生效）` : ''}`);
-  return { changed, cleared };
-}
 
 function statusPayload(runtime) {
   const { config, llm, bot, gateways } = runtime;
@@ -358,50 +216,6 @@ function storeSummary(runtime) {
   return { sessions: s.sessions, messages: s.messages, notes: s.notes, totalMessages: s.totalMessages, totalReplies: s.totalReplies };
 }
 
-/* ---------------- 主动分享：从群聊热点找视频 ---------------- */
-
-async function shareForChat(runtime, chatId) {
-  const key = chatId ? `wechat:g:${chatId}` : '';
-  let texts = [];
-  if (key) {
-    try {
-      texts = runtime.store
-        .messages(key, 30)
-        .filter((m) => m.role === 'user' && m.text)
-        .map((m) => String(m.text).slice(0, 120));
-    } catch {
-      texts = [];
-    }
-  }
-  let topic = '';
-  if (texts.length >= 3) {
-    try {
-      const out = await runtime.llm.complete({
-        system: '你只输出 1 个适合去视频网站搜的中文话题词，不超过 8 个字，不要解释、不要标点。',
-        turns: [{ role: 'user', content: texts.slice(-20).join('\n').slice(0, 1500) }],
-      });
-      topic = String(out).replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').slice(0, 12);
-    } catch {
-      topic = '';
-    }
-  }
-  let video = topic ? await bilibili.pickByKeyword(runtime.config, topic) : null;
-  if (!video) video = await bilibili.pickVideo(runtime.config);
-  if (!video) return { ok: true, video: null, topic };
-  const comments = await bilibili.fetchComments(video.bvid, 5);
-  let comment = '';
-  try {
-    const sys = '你叫鲸鲸，爱刷视频的女生。看完这个视频，用第一人称说一句自己的感悟或吐槽（跟自己的生活、心情有关），10~20 字；不要复述标题、不要解释、不要提 AI/模型/token/提示词。';
-    const user = `话题：${topic || '随便'}\n标题：${video.title}\n评论：${comments.slice(0, 3).join(' / ')}`;
-    comment = String(await runtime.llm.complete({ system: sys, turns: [{ role: 'user', content: user }] }))
-      .trim()
-      .slice(0, 60);
-  } catch {
-    comment = '';
-  }
-  return { ok: true, video, topic, comments: comments.slice(0, 3), comment };
-}
-
 /* ---------------- 消息汇总 ---------------- */
 
 function buildDigest(items) {
@@ -435,16 +249,15 @@ function applyPersonaPatch(runtime, body) {
   }
   const patch = {};
   const str = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
-  if (body.name !== undefined) patch.name = str(body.name, 40) || '鲸鲸';
-  if (body.job !== undefined) patch.job = str(body.job, 80) || '自由职业';
+  if (body.name !== undefined) patch.name = str(body.name, 40) || '大肥鱼';
   if (body.appearance !== undefined) patch.appearance = str(body.appearance, 400);
   if (body.personality !== undefined) patch.personality = str(body.personality, 500);
   if (body.background !== undefined) patch.background = str(body.background, 500);
   if (body.customPrompt !== undefined) patch.customPrompt = str(body.customPrompt, 6000);
-  if (body.age !== undefined) patch.age = Math.max(1, Math.min(120, Number(body.age) || 23));
   if (body.preset !== undefined) patch.preset = str(body.preset, 20);
   if (body.text !== undefined) patch.text = str(body.text, 300);
   if (body.emoji !== undefined) patch.emoji = ['关', '少', '正常', '多'].includes(body.emoji) ? body.emoji : '正常';
+  // dsh-soul 移植：风格 / 长度 / 格式特质（白名单校验，非法值按清空处理）
   if (body.historyTurns !== undefined) patch.historyTurns = Math.max(4, Math.min(400, Number(body.historyTurns) || 200));
   if (body.groupHistoryTurns !== undefined) patch.groupHistoryTurns = Math.max(2, Math.min(300, Number(body.groupHistoryTurns) || 150));
   if (body.privateMaxChars !== undefined) patch.privateMaxChars = Math.max(40, Math.min(800, Number(body.privateMaxChars) || 140));
@@ -453,6 +266,10 @@ function applyPersonaPatch(runtime, body) {
     if (body[k] !== undefined) patch[k] = Boolean(body[k]);
   }
   if (Array.isArray(body.mutedGroups)) patch.mutedGroups = body.mutedGroups.map((x) => String(x).trim()).filter(Boolean).slice(0, 30);
+  // 原调试台项，并入调教页
+  if (Array.isArray(body.aliases)) patch.aliases = body.aliases.map((x) => String(x).trim()).filter(Boolean).slice(0, 20);
+  if (body.requireAt !== undefined) patch.requireAt = Boolean(body.requireAt);
+  if (body.maxBubbles !== undefined) patch.maxBubbles = Math.max(1, Math.min(6, Number(body.maxBubbles) || 2));
   personaStore.save(runtime.config, patch);
   if (body.model) {
     try {
@@ -505,7 +322,6 @@ function debugState(runtime) {
     persona: {
       name: config.persona.name,
       aliases: config.persona.aliases || [],
-      ownerName: config.persona.ownerName || '',
       master: {
         names: master.names || [],
         wxids: master.wxids || [],
@@ -568,16 +384,21 @@ function debugState(runtime) {
 function debugSessions(runtime) {
   const list = [];
   for (const [key, sess] of runtime.store.sessions) {
+    const profiles = Object.values(sess.profiles).map((p) => ({ uid: p.uid, name: p.name, nickname: p.nickname, notes: p.notes || [] }));
+    // 显示名：优先会话标题（群名/备注），私聊没有标题时取对方昵称，最后兜底用 key
+    const contact = profiles.find((p) => (p.nickname || p.name) && p.uid !== 'user');
+    const displayName = sess.title || (sess.chatType === 'private' && contact ? (contact.nickname || contact.name) : '') || key;
     list.push({
       key,
       platform: sess.platform,
       chatType: sess.chatType,
       title: sess.title,
+      displayName,
       lastActiveAt: sess.lastActiveAt,
       messageCount: sess.messages.length,
       adminUntil: sess.state.adminUntil || 0,
-      profiles: Object.values(sess.profiles).map((p) => ({ uid: p.uid, name: p.name, nickname: p.nickname, notes: p.notes || [] })),
-      messages: sess.messages.slice(-8).map((m) => ({ role: m.role, name: m.name, text: m.text, ts: m.ts })),
+      profiles,
+      messages: sess.messages.slice(-50).map((m) => ({ role: m.role, name: m.name, text: m.text, ts: m.ts })),
     });
   }
   list.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
@@ -669,7 +490,7 @@ async function handleChat(runtime, req, res) {
     decision = await bot.decide(msg);
   } catch (err) {
     logger.error('decide 失败：' + (err && err.stack ? err.stack : err));
-    return json(res, 500, { ok: false, error: '鲸鲸打了个结，稍后再试' });
+    return json(res, 500, { ok: false, error: '大肥鱼打了个结，稍后再试' });
   }
 
   // 被忽略（群聊里没被叫到）
@@ -754,7 +575,7 @@ function handleSettingsGet(runtime, res) {
     temperature: llm.temperature,
     keyMasked: maskKey(rt.apiKey),
     hasKey: Boolean(rt.apiKey),
-    userName: String(saved.userName || config.persona.ownerName || ''),
+    userName: String(saved.userName || ''),
     // 看图（视觉）状态：网页设置里要能看出「填没填、填的是哪把」
     vision: vision.status(config),
     providers,
@@ -764,6 +585,7 @@ function handleSettingsGet(runtime, res) {
       freeChatChance: config.group.freeChatChance,
       cooldownSec: config.group.cooldownSec,
     },
+    proactive: runtime.proactive ? runtime.proactive.effective() : (config.proactive || {}),
     configFile: config.paths.configFile,
     dataDir: config.paths.dataDir,
   });
@@ -829,8 +651,42 @@ async function applySettings(runtime, body) {
       config.group.freeChatChance = Math.max(0, Math.min(1, Number(body.group.freeChatChance)));
     }
   }
+  // 主动消息配置：整体覆盖式保存（面板提交的就是完整的一份）
+  if (body.proactive && typeof body.proactive === 'object') {
+    const p = body.proactive;
+    const cleanPro = {};
+    if (typeof p.enabled === 'boolean') cleanPro.enabled = p.enabled;
+    if (Number.isFinite(Number(p.checkIntervalSec))) cleanPro.checkIntervalSec = Math.max(15, Math.min(3600, Number(p.checkIntervalSec)));
+    if (typeof p.quietStart === 'string' && /^\d{1,2}:\d{2}$/.test(p.quietStart.trim())) cleanPro.quietStart = p.quietStart.trim();
+    if (typeof p.quietEnd === 'string' && /^\d{1,2}:\d{2}$/.test(p.quietEnd.trim())) cleanPro.quietEnd = p.quietEnd.trim();
+    if (typeof p.bridgeUrl === 'string') {
+      const u = p.bridgeUrl.trim().slice(0, 200);
+      if (u && !/^https?:\/\/[^\s]+$/.test(u)) throw new Error('桥接地址要以 http:// 或 https:// 开头');
+      if (u) cleanPro.bridgeUrl = u;
+    }
+    if (typeof p.prompt === 'string') cleanPro.prompt = p.prompt.trim().slice(0, 500);
+    const cleanThreshold = (t) => {
+      const o = {};
+      if (typeof t.enabled === 'boolean') o.enabled = t.enabled;
+      if (Number.isFinite(Number(t.silentMinutes))) o.silentMinutes = Math.max(5, Math.min(24 * 60, Number(t.silentMinutes)));
+      if (Number.isFinite(Number(t.maxPerHour))) o.maxPerHour = Math.max(1, Math.min(30, Number(t.maxPerHour)));
+      if (Number.isFinite(Number(t.maxPerDay))) o.maxPerDay = Math.max(1, Math.min(100, Number(t.maxPerDay)));
+      return o;
+    };
+    if (p.defaults && typeof p.defaults === 'object') cleanPro.defaults = cleanThreshold(p.defaults);
+    if (Array.isArray(p.targets)) {
+      cleanPro.targets = p.targets.slice(0, 50).map((t) => {
+        const o = cleanThreshold(t || {});
+        o.type = t && t.type === 'master' ? 'master' : 'chat';
+        o.name = String((t && t.name) || '').trim().slice(0, 60);
+        return o;
+      }).filter((t) => t.type === 'master' || t.name);
+    }
+    patch.proactive = cleanPro;
+  }
   saveSettings(config, patch);
   llm.reload();
+  if (runtime.proactive) runtime.proactive.reload();
   const mode = llm.isMock ? '演示' : `${llm.providerLabel} · ${llm.model}`;
   runtime.logger.info(`设置已更新：${mode}`);
   return {
@@ -860,7 +716,7 @@ async function applySettings(runtime, body) {
 function serveStatic(runtime, req, res, urlPath) {
   const { config, logger } = runtime;
   const webDir = config.paths.webDir;
-  const rel = urlPath === '/' ? 'index.html' : urlPath === '/debug' ? 'debug.html' : urlPath === '/persona' ? 'persona.html' : urlPath.replace(/^\/+/, '');
+  const rel = urlPath === '/' ? 'index.html' : urlPath === '/persona' ? 'persona.html' : urlPath === '/memory' ? 'memory.html' : urlPath.replace(/^\/+/, '');
   const filePath = path.resolve(webDir, rel);
   if (!filePath.startsWith(webDir)) {
     return json(res, 403, { ok: false, error: 'forbidden' });
@@ -968,21 +824,41 @@ function createHandler(runtime) {
         }
       }
 
-      if (pathname === '/api/share' && method === 'GET') {
-        try {
-          const share = await shareForChat(runtime, url.searchParams.get('chat') || '');
-          return json(res, 200, share);
-        } catch (err) {
-          runtime.logger.warn('挑视频失败：' + (err && err.message));
-          return json(res, 500, { ok: false, error: String((err && err.message) || err) });
-        }
-      }
-
       if (pathname === '/api/digest' && method === 'GET') {
         const q = new URL(req.url, 'http://localhost');
         const since = Number(q.searchParams.get('since') || 0);
         const items = runtime.store.listDigest(since).slice(-120);
         return json(res, 200, buildDigest(items));
+      }
+
+      // 主动消息：状态查询 / 手动测试发送
+      if (pathname === '/api/proactive/status' && method === 'GET') {
+        return json(res, 200, { ok: true, proactive: runtime.proactive.status() });
+      }
+      // 可选择的微信会话列表（设置主动消息对象时用）
+      if (pathname === '/api/proactive/sessions' && method === 'GET') {
+        const botName = (runtime.config.persona || {}).name || '';
+        const list = [];
+        for (const sess of runtime.store.sessions.values()) {
+          if (sess.platform !== 'wechat') continue;
+          if (!sess.messages.length) continue;
+          // 私聊没有会话标题：从联系人档案里取对方昵称，别露出 wxid
+          let title = sess.title || '';
+          if (!title) {
+            for (const p of Object.values(sess.profiles || {})) {
+              const n = (p && (p.nickname || p.name)) || '';
+              if (n && n !== botName) { title = n; break; }
+            }
+          }
+          list.push({
+            title: title || sess.chatId,
+            chatId: sess.chatId,
+            chatType: sess.chatType,
+            lastActiveAt: sess.lastActiveAt,
+          });
+        }
+        list.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+        return json(res, 200, { ok: true, sessions: list.slice(0, 100) });
       }
 
       if (pathname === '/api/persona' && method === 'GET') {
@@ -1015,9 +891,19 @@ function createHandler(runtime) {
       if (pathname === '/api/wechat/status' && method === 'GET') {
         return json(res, 200, { ok: true, bridge: wechatBridge.status() });
       }
+      if (pathname === '/api/wechat/precheck' && method === 'GET') {
+        const check = await wechatBridge.precheck(config.root || projectRoot());
+        return json(res, 200, { ok: true, precheck: check });
+      }
       if (pathname === '/api/wechat/start' && method === 'POST') {
+        // 启动前先预检，缺依赖时直接返回提示，不让用户看到秒退
+        const root = config.root || projectRoot();
+        const check = await wechatBridge.precheck(root);
+        if (!check.ready) {
+          return json(res, 400, { ok: false, error: check.hint, precheck: check });
+        }
         const result = await wechatBridge.start({
-          root: config.root || projectRoot(),
+          root,
           port: runtime.config.server.port,
           logger: runtime.logger,
         });
@@ -1027,36 +913,6 @@ function createHandler(runtime) {
         return json(res, 200, wechatBridge.stop({ logger: runtime.logger }));
       }
 
-      if (pathname === '/api/config') {
-        if (method === 'GET') {
-          const pub = publicConfig(runtime.config);
-          return json(res, 200, {
-            ok: true,
-            config: pub.config,
-            secrets: pub.secrets,
-            configFile: runtime.config.paths.configFile,
-            settingsFile: runtime.config.paths.settingsFile,
-          });
-        }
-        if (method === 'POST') {
-          const body = await readBody(req);
-          try {
-            const out = applyConfigPatch(runtime, body && body.patch);
-            const pub = publicConfig(runtime.config);
-            return json(res, 200, {
-              ok: true,
-              changed: out.changed,
-              clearedSettings: out.cleared,
-              config: pub.config,
-              secrets: pub.secrets,
-              status: statusPayload(runtime),
-            });
-          } catch (err) {
-            return json(res, 400, { ok: false, error: String((err && err.message) || err) });
-          }
-        }
-        return json(res, 405, { ok: false, error: 'method not allowed' });
-      }
 
       if (pathname === '/api/debug/state' && method === 'GET') {
         return json(res, 200, debugState(runtime));
@@ -1211,7 +1067,7 @@ function printBanner(runtime, url) {
   const { llm, config } = runtime;
   const lines = [
     '',
-    '  🐋  鲸鲸 · 深海聊天机器人  ',
+    '  🐋  大肥鱼 · 深海聊天机器人  ',
     '  ────────────────────────────────────────────',
     `  网页聊天：   ${url}`,
     `  运行模式：   ${llm.isMock ? '演示模式（还没配置模型，用内置台词）' : `${llm.providerLabel} · ${llm.model}`}`,
@@ -1260,7 +1116,7 @@ function runDoctor() {
       gw && gw.enabled ? (gw.outboundUrl ? `outbound: ${gw.outboundUrl}` : '已启用，但未配置 outboundUrl（只打印不发送）') : '未启用（可在 config.json 里开启）'
     );
   }
-  console.log('\n🐋 鲸鲸 · 环境自检\n');
+  console.log('\n🐋 大肥鱼 · 环境自检\n');
   for (const c of checks) console.log(`  ${c.ok ? '✅' : '⚠️ '} ${c.name.padEnd(12, ' ')} ${c.detail}`);
   console.log('\n提示：没有 Key 也能启动——网页里可以选免费的智谱 GLM-4-Flash，或本地 Ollama，全程不花钱。\n');
   return checks.every((c) => c.ok);
@@ -1297,7 +1153,7 @@ async function main() {
   instance.runtime.logger.info(`服务已启动 ${instance.url}，模式=${instance.runtime.llm.isMock ? '演示' : '真实 API'}`);
 
   const shutdown = async () => {
-    console.log('\n🌊 鲸鲸要潜回深海了…');
+    console.log('\n🌊 大肥鱼要潜回深海了…');
     await instance.close();
     process.exit(0);
   };

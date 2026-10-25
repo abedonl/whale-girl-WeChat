@@ -1,5 +1,5 @@
 """
-鲸鲸 · 一键暂停/恢复热键守护
+大肥鱼 · 一键暂停/恢复热键守护
 - PageUp  (VK_PRIOR)：先给最近 3 个聊天发「我先歇一会儿…」，然后停掉服务 + 微信桥接
 - PageDown(VK_NEXT) ：恢复服务和桥接
 
@@ -146,7 +146,7 @@ def test_send():
 
 
 def pause_bot():
-    log("=== PageUp：终止鲸鲸 ===")
+    log("=== PageUp：终止大肥鱼 ===")
     os.makedirs(DATA, exist_ok=True)
     if not DRY_RUN:
         with open(FLAG, "w", encoding="utf-8") as f:

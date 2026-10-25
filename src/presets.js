@@ -75,11 +75,10 @@ function toPatch(preset) {
   if (preset.customPrompt) patch.customPrompt = str(preset.customPrompt, 6000);
   if (preset.preset) patch.preset = str(preset.preset, 20);
   if (preset.text) patch.text = str(preset.text, 300);
-  if (preset.age) patch.age = Math.max(1, Math.min(120, Number(preset.age) || 23));
   if (preset.privateMaxChars) patch.privateMaxChars = Math.max(40, Math.min(800, Number(preset.privateMaxChars)));
   if (preset.groupMaxChars) patch.groupMaxChars = Math.max(20, Math.min(300, Number(preset.groupMaxChars)));
-  if (preset.historyTurns) patch.historyTurns = Math.max(4, Math.min(120, Number(preset.historyTurns)));
-  if (preset.groupHistoryTurns) patch.groupHistoryTurns = Math.max(2, Math.min(100, Number(preset.groupHistoryTurns)));
+  if (preset.historyTurns) patch.historyTurns = Math.max(4, Math.min(400, Number(preset.historyTurns)));
+  if (preset.groupHistoryTurns) patch.groupHistoryTurns = Math.max(2, Math.min(300, Number(preset.groupHistoryTurns)));
   return Object.keys(patch).length ? patch : null;
 }
 

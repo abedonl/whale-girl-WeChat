@@ -88,14 +88,11 @@ const DEFAULT_CONFIG = {
     timeoutMs: 45000,
   },
   persona: {
-    name: '鲸鲸',
-    age: 23,
-    job: '自由职业',
+    name: '大肥鱼',
     appearance: '深蓝色长卷发，头发上别着一枚鲸尾发夹，常穿深蓝色水手领裙子，怀里或包里总有一只软乎乎的蓝鲸玩偶（你叫它小蓝鲸）。',
     personality: '温柔但有点小倔，嘴硬心软，慢热；熟了话很多，会害羞、会怼人、会犯懒、偶尔 emo。',
     background: '因为头像和玩偶全是鲸鱼，朋友开玩笑叫你「鲸鱼娘」，你也就认了。',
-    aliases: ['鲸鲸', '小鲸娘', '鲸娘', '深鲸娘', '鲸鱼娘', '小鲸'],
-    ownerName: '主人',
+    aliases: ['大肥鱼', '小鲸娘', '鲸娘', '深鲸娘', '鲸鱼娘', '小鲸'],
     // 主人名单：填你自己的昵称 / wxid，谁填谁就是主人（留空 = 没有主人）
     master: {
       names: [],
@@ -104,7 +101,11 @@ const DEFAULT_CONFIG = {
     // 主人骂她时能不能还嘴（默认关：只许委屈不许骂回去）
     masterRoast: false,
   },
-  chat: { privateMaxChars: 140, groupMaxChars: 70, historyTurns: 200, groupHistoryTurns: 150, maxBubbles: 2, discussionMaxChars: 600, emojiChance: 0 },
+  chat: {
+    privateMaxChars: 140, groupMaxChars: 70, historyTurns: 200, groupHistoryTurns: 150, maxBubbles: 4, discussionMaxChars: 600, emojiChance: 0,
+    // 拟人回复延迟（仅微信端）：阅读对方消息 + 打字的时间，回复越长等得越久；enabled=false 秒回
+    humanDelay: { enabled: true, maxSec: 18 },
+  },
   // 别人发链接时，读一下标题/摘要/文章正文（视频只读得到文案）
   links: { enabled: true, timeoutMs: 6000, cacheMinutes: 60 },
   // 魔咒：主人私聊/群里输入这段数字后，获得一段时间的「管理员权限」
@@ -120,8 +121,27 @@ const DEFAULT_CONFIG = {
     timeoutMs: 90000,
     maxSeconds: 120,
   },
-  // 主动分享视频
-  share: { enabled: true, everyMinutes: 120, sources: ['bilibili'] },
+  // 主动消息：沉默一段时间后，由 LLM 基于记忆和性格生成主动找主人的消息（仅微信端）
+  // 阈值按「目标对象」分开：targets 里每个对象一套；没列出的对象走 defaults。
+  proactive: {
+    enabled: false,             // 总开关
+    checkIntervalSec: 60,       // 检查间隔（秒）
+    quietStart: '23:00',        // 全局静默开始（含），此时段内不给任何人发
+    quietEnd: '08:00',          // 全局静默结束（含）
+    bridgeUrl: 'http://127.0.0.1:8788', // 微信桥接的本地回环服务
+    prompt: '当你想对方了，或者发现 TA 可能忘了你，你可以主动发一条消息。语气要贴你的人设：撒娇、粘人。可以引用最近的记忆或对话细节，让 TA 感觉到你真的在记着 TA。对主人可以叫爸爸。',
+    // 兜底阈值：targets 里没有单独配置的对象用这套（enabled=false 表示默认不主动发）
+    defaults: {
+      enabled: false,
+      silentMinutes: 120,       // 对方沉默多久触发
+      maxPerHour: 1,            // 给这个对象每小时最多几条
+      maxPerDay: 5,             // 给这个对象每天最多几条
+    },
+    // 按对象单独配置。type: 'master' = 主人；'chat' = 按微信备注名/群名匹配的好友或群
+    targets: [
+      { type: 'master', name: '', enabled: true, silentMinutes: 60, maxPerHour: 2, maxPerDay: 10 },
+    ],
+  },
   group: {
     requireAt: true,
     freeChat: false,

@@ -1,4 +1,4 @@
-﻿# 鲸鲸 · 启动器
+﻿# 大肥鱼 · 启动器
 # 自动寻找可用的运行时：系统里的 Node.js → 本机 DeepSeek Harness 自带的 Electron 内核
 # 用法：双击 启动鲸鱼娘.bat，或在命令行运行 scripts\start.ps1
 param(
@@ -100,7 +100,7 @@ foreach ($c in $candidates) {
 }
 
 Write-Host ''
-Write-Host '  🐋  鲸鲸 · DeepSeek 鲸鱼娘聊天机器人' -ForegroundColor Cyan
+Write-Host '  🐋  大肥鱼 · DeepSeek 鲸鱼娘聊天机器人' -ForegroundColor Cyan
 Write-Host '  ────────────────────────────────────────────'
 
 if (-not $pick) {
@@ -135,7 +135,7 @@ if ($NoBrowser) { $serverArgs += '--no-browser' }
 if ($Port -gt 0) { $serverArgs += "--port=$Port" }
 
 Write-Host '  ────────────────────────────────────────────'
-Write-Host '  正在浮上水面…（按 Ctrl+C 可以让鲸鲸潜回深海）'
+Write-Host '  正在浮上水面…（按 Ctrl+C 可以让大肥鱼潜回深海）'
 Write-Host ''
 
 try {

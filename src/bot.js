@@ -12,7 +12,7 @@
  *   senderId: 'wxid_xxx',
  *   senderName: '阿螈',
  *   text: '在吗',
- *   atMe: false,                     // 是否 @ 了鲸鲸 / 回复了鲸鲸
+ *   atMe: false,                     // 是否 @ 了大肥鱼 / 回复了大肥鱼
  *   msgId: '可选，用于去重',
  *   chatTitle: '深海鱼塘',            // 可选，群名
  * }
@@ -291,7 +291,7 @@ class Bot {
       // 只发送不可反推的参与者标签，不把内部微信 ID 暴露给模型。
       const { createHash } = require('node:crypto');
       const speaker = (m) => {
-        if (m.role === 'assistant') return '鲸鲸（机器人）';
+        if (m.role === 'assistant') return '大肥鱼（机器人）';
         const uid = m.uid || m.senderId || m.name || m.senderName || '未知';
         const tag = createHash('sha256').update(`${msg.chatId}:${uid}`).digest('hex').slice(0, 8);
         return `${m.name || m.senderName || '群友'}（参与者${tag}）`;
@@ -307,7 +307,7 @@ class Bot {
           时间: formatChatTime(ts), 发言人: speaker(event),
           内容: sanitizeForModel(String(event.text).slice(0, MAX_TURN_CHARS)),
         };
-        if (event.addressedToBot) record.叫到鲸鲸 = true;
+        if (event.addressedToBot) record.叫到大肥鱼 = true;
         if (event.mentionedNames?.length) record.其他提及对象 = event.mentionedNames;
         if (event.inferredTargetNames?.length) record.可能承接的对象 = event.inferredTargetNames;
         if (event.replyToName) record.引用对象 = event.replyToName;
@@ -317,7 +317,7 @@ class Bot {
         发言人: speaker(msg),
         // 挨骂的时候要让它看见原话，否则不知道对面骂了什么，回怼就没劲
         内容: msg.fight ? String(msg.cleanText || msg.text) : sanitizeForModel(msg.cleanText || msg.text),
-        叫到鲸鲸: Boolean(msg.addressedToBot || msg.atMe || msg.replyToBot),
+        叫到大肥鱼: Boolean(msg.addressedToBot || msg.atMe || msg.replyToBot),
         其他提及对象: msg.mentionedNames || [],
         ...(msg.replyToName ? { 引用对象: msg.replyToName } : {}),
       });
@@ -367,7 +367,7 @@ class Bot {
       }
       previousTs = ts || previousTs;
       if (m.role === 'assistant') {
-        push('assistant', isGroup ? `${gap}[${formatChatTime(ts)}][鲸鲸] ${m.text}` : m.text, false);
+        push('assistant', isGroup ? `${gap}[${formatChatTime(ts)}][大肥鱼] ${m.text}` : m.text, false);
       } else {
         const label = isGroup ? `[${formatChatTime(ts)}][${m.name || '群友'}] ${m.text}` : m.text;
         push('user', sanitizeForModel(gap + label), false);
@@ -395,6 +395,15 @@ class Bot {
    */
   async decide(rawMsg) {
     const msg = this.normalize(rawMsg);
+    // 主动消息退避钩子：识别「别烦我 / 在忙 / 晚安」等，更新该会话的退避时间（规则匹配，不调 LLM）
+    if (this.proactive) {
+      try {
+        this.proactive.observeIncoming(msg);
+      } catch (err) {
+        // 退避识别失败只影响主动消息的退避，不影响正常回复，记 debug 即可
+        if (this.logger && this.logger.debug) this.logger.debug('[proactive] 退避识别失败：' + err.message);
+      }
+    }
     // 网页/管理员动态改窗口后，存储限额也要跟上；不会恢复之前已被丢弃的记录。
     if (this.store.limits) this.store.limits.maxMessages = Math.min(800, Math.max(this.store.limits.maxMessages, Number(this.config.chat.historyTurns || 200) + 2, Number(this.config.chat.groupHistoryTurns || 150) + 2));
     const key = this.sessionKey(msg);
@@ -664,7 +673,7 @@ class Bot {
       }
     }
 
-    // 3) 命令（群里说「安静」这类自然语言命令，要先叫到鲸鲸才算；主人说话直接算）
+    // 3) 命令（群里说「安静」这类自然语言命令，要先叫到大肥鱼才算；主人说话直接算）
     let command = hasText ? extractCommand(clean.text) : null;
     const slashCommand = Boolean(command && /^[/／!！]/.test(command.raw));
     const addressed = atMe || msg.replyToBot;
@@ -911,14 +920,14 @@ class Bot {
       if (sameSender && (question || txt.length <= 30)) return { wake: true, reason: 'engaged' };
       // 别人也在接这个话题：她刚说过话、对方又用「你」冲她说，就不算旁人闲聊
       const justSpoke = Number(state.lastReplyAt) && nowMs - Number(state.lastReplyAt) < 90 * 1000;
-      const toHer = /你|你们|咱|鲸鲸|小鲸|肥鱼/.test(txt);
+      const toHer = /你|你们|咱|大肥鱼|小鲸|肥鱼/.test(txt);
       if (justSpoke && toHer && txt.length <= 60) return { wake: true, reason: 'engaged_group' };
       return { wake: false, reason: 'engaged_side_chatter' };
     }
     // 她刚在群里说过话（3 分钟内），紧接着有人用「你」冲她说话 → 也算在跟她说
     const lastBotAt = Number(state.lastReplyAt) || 0;
     const txtNow = String(clean.text || '');
-    if (lastBotAt && nowMs - lastBotAt < 3 * 60000 && /你|你们|鲸鲸|小鲸|肥鱼/.test(txtNow) && txtNow.length <= 60) {
+    if (lastBotAt && nowMs - lastBotAt < 3 * 60000 && /你|你们|大肥鱼|小鲸|肥鱼/.test(txtNow) && txtNow.length <= 60) {
       return { wake: true, reason: 'followup' };
     }
 
@@ -1302,7 +1311,7 @@ class Bot {
     return text + ' ' + list[Math.floor(this.rng() * list.length)];
   }
 
-  /** 写入鲸鲸自己的回复，返回气泡数组 */
+  /** 写入大肥鱼自己的回复，返回气泡数组 */
   finalize(decision, text, { error = false } = {}) {
     text = String(text == null ? '' : text).trim();
     // 正文里的 emoji 剥出来，单独发一条
@@ -1401,16 +1410,33 @@ class Bot {
     });
     const isGroup = msg.chatType === 'group';
     if (decision.action === 'command') return [text];
-    const maxBubbles = Math.max(1, Number(this.config.chat.maxBubbles) || 2);
+    const maxBubbles = Math.max(1, Number(this.config.chat.maxBubbles) || 4);
     const maxChars = msg.discussion ? (this.config.chat.discussionMaxChars || 400) : (isGroup ? this.config.chat.groupMaxChars : this.config.chat.privateMaxChars);
     let bubbles;
     if (decision.action === 'reply') {
-      // 按逗号/句号拆成几条短消息，每条不带标点
+      // 像真人一样逐句发：一个短句一条气泡；句数超过上限时，多出的短句并进最后一条
       const clauses = (text.match(/[^，。！？!?；;\n]+/g) || [])
         .map((s) => s.trim().replace(/^[，。！？!?；;]+|[，。！？!?；;~～…]+$/g, ''))
         .filter(Boolean);
-      if (clauses.length > 1 && clauses.length <= maxBubbles) {
-        bubbles = clauses;
+      if (clauses.length > 1) {
+        // 自然分段：短句并进同一条，攒够十几个字才起新气泡；段数随内容多少变化，不固定打满
+        bubbles = [];
+        let target = 8 + Math.floor(Math.random() * 10); // 每条气泡的软目标长度，随机 8~17 字
+        for (const c of clauses) {
+          if (c.length > maxChars) {
+            // 单句本身超长，仍按长度切
+            bubbles.push(...persona.splitBubbles(c, { maxChars, maxBubbles: 2 })
+              .map((b) => String(b || '').trim().replace(/[~～]+$/g, '').replace(/[。！!…]+$/g, ''))
+              .filter(Boolean));
+            target = 8 + Math.floor(Math.random() * 10);
+          } else if (!bubbles.length || bubbles[bubbles.length - 1].length >= target) {
+            if (bubbles.length < maxBubbles) { bubbles.push(c); target = 8 + Math.floor(Math.random() * 10); }
+            else bubbles[maxBubbles - 1] += c;
+          } else {
+            bubbles[bubbles.length - 1] += c;
+          }
+        }
+        bubbles = bubbles.slice(0, maxBubbles).filter(Boolean);
       } else {
         bubbles = persona.splitBubbles(text, { maxChars, maxBubbles })
           .map((b) => String(b || '').trim().replace(/[~～]+$/g, '').replace(/[。！!…]+$/g, ''))

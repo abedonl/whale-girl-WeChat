@@ -19,7 +19,7 @@ test('写入/读取消息并保持顺序', () => {
   const { store, dir } = tempStore();
   store.ensureSession('k', { platform: 'web', chatId: 'c', chatType: 'private' });
   store.appendMessage('k', { role: 'user', name: '小海', text: '在吗' });
-  store.appendMessage('k', { role: 'assistant', name: '鲸鲸', text: '在的~' });
+  store.appendMessage('k', { role: 'assistant', name: '大肥鱼', text: '在的~' });
   const msgs = store.messages('k', 10);
   assert.equal(msgs.length, 2);
   assert.equal(msgs[0].text, '在吗');

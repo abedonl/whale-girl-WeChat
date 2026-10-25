@@ -1,4 +1,4 @@
-﻿# 运行时数据：包含 API Key、聊天记录、人设、词库、日志、微信数据库快照，绝不入库
+﻿﻿# 运行时数据：包含 API Key、聊天记录、人设、词库、日志、微信数据库快照，绝不入库
 data/
 config.json
 wechatauto_logs/
@@ -21,7 +21,8 @@ venv/
 dist/
 release/
 release2/
-鲸鲸桌面版/
+大肥鱼桌面版/
+whalegirl-desktop/
 .eb-cache/
 
 # 系统

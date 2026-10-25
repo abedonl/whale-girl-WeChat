@@ -65,7 +65,7 @@ test('群里不会乱记别人的自述（避免记错人）', async () => {
   const { bot, store, cleanup } = makeBot();
   await bot.decide({
     platform: 'wechat', chatId: 'g1', chatType: 'group',
-    senderId: 'u-a', senderName: '甲', text: '@鲸鲸 我叫王大锤', atMe: true, chatTitle: '深海鱼塘',
+    senderId: 'u-a', senderName: '甲', text: '@大肥鱼 我叫王大锤', atMe: true, chatTitle: '深海鱼塘',
   });
   assert.equal(store.listNotes('wechat:g:g1').flatMap((x) => x.notes).length, 0);
   cleanup();
@@ -86,7 +86,7 @@ test('超长历史会被压成一句摘要，而不是直接消失', async () =>
   }
   const r = await bot.decide({
     platform: 'wechat', chatId: 'g-big', chatType: 'group',
-    senderId: 'u-0', senderName: '群友0', text: '@鲸鲸 刚才聊到哪了', atMe: true, chatTitle: '深海鱼塘',
+    senderId: 'u-0', senderName: '群友0', text: '@大肥鱼 刚才聊到哪了', atMe: true, chatTitle: '深海鱼塘',
   });
   const content = r.turns.map((t) => t.content).join('\n');
   assert.ok(content.length > 1500, '上下文应该够长：' + content.length);

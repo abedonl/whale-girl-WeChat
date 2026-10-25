@@ -46,12 +46,14 @@ function save(config, patch) {
     opinions: config.persona ? config.persona.opinions !== false : undefined,
     masterRoast: config.persona ? Boolean(config.persona.masterRoast) : undefined,
     name: config.persona ? config.persona.name : undefined,
-    age: config.persona ? config.persona.age : undefined,
-    job: config.persona ? config.persona.job : undefined,
     appearance: config.persona ? config.persona.appearance : undefined,
     personality: config.persona ? config.persona.personality : undefined,
     background: config.persona ? config.persona.background : undefined,
     customPrompt: config.persona ? config.persona.customPrompt : undefined,
+    // 原调试台独有项，并入调教页
+    aliases: config.persona && Array.isArray(config.persona.aliases) ? config.persona.aliases : undefined,
+    requireAt: config.group ? Boolean(config.group.requireAt) : undefined,
+    maxBubbles: config.chat ? config.chat.maxBubbles : undefined,
   };
   for (const k of Object.keys(base)) if (base[k] === undefined) delete base[k];
   const next = { ...base, ...load(config), ...patch };
@@ -85,9 +87,7 @@ const DEFAULTS = {
   emotions: true,
   proactive: true,
   opinions: true,
-  name: '鲸鲸',
-  age: 23,
-  job: '自由职业',
+  name: '大肥鱼',
   appearance: '深蓝色长卷发，头发上别着一枚鲸尾发夹，常穿深蓝色水手领裙子，怀里或包里总有一只软乎乎的蓝鲸玩偶（你叫它小蓝鲸）。',
   personality: '温柔但有点小倔，嘴硬心软，慢热；熟了话很多，会害羞、会怼人、会犯懒、偶尔 emo。',
   background: '因为头像和玩偶全是鲸鱼，朋友开玩笑叫你「鲸鱼娘」，你也就认了。',
@@ -132,11 +132,16 @@ function apply(config, data) {
   if (data.masterRoast !== undefined) config.persona.masterRoast = Boolean(data.masterRoast);
   config.persona.proactive = data.proactive !== false;
   config.persona.opinions = data.opinions !== false;
-  for (const k of ['name', 'job', 'appearance', 'personality', 'background']) {
+  for (const k of ['name', 'appearance', 'personality', 'background']) {
     if (data[k] !== undefined) config.persona[k] = String(data[k] || '');
   }
-  if (data.age !== undefined) config.persona.age = Number(data.age) || 23;
   if (data.customPrompt !== undefined) config.persona.customPrompt = String(data.customPrompt || '');
+  // 原调试台独有项，并入调教页
+  if (data.aliases !== undefined) {
+    config.persona.aliases = Array.isArray(data.aliases) ? data.aliases.map((s) => String(s).trim()).filter(Boolean).slice(0, 20) : [];
+  }
+  if (data.requireAt !== undefined) config.group.requireAt = Boolean(data.requireAt);
+  if (data.maxBubbles !== undefined) config.chat.maxBubbles = Math.max(1, Math.min(6, Number(data.maxBubbles) || 2));
   return config;
 }
 
@@ -157,12 +162,13 @@ function summary(config) {
     opinions: config.persona.opinions !== false,
     masterRoast: Boolean(config.persona.masterRoast),
     name: config.persona.name,
-    age: config.persona.age,
-    job: config.persona.job,
     appearance: config.persona.appearance,
     personality: config.persona.personality,
     background: config.persona.background,
     customPrompt: config.persona.customPrompt || '',
+    aliases: Array.isArray(config.persona.aliases) ? config.persona.aliases.slice() : [],
+    requireAt: config.group ? config.group.requireAt !== false : true,
+    maxBubbles: config.chat ? Number(config.chat.maxBubbles) || 2 : 2,
   };
 }
 

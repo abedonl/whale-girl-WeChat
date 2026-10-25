@@ -1,10 +1,10 @@
 # 网关协议（GATEWAY）
 
-鲸鲸只负责「怎么说话」，不负责「怎么连微信/抖音」。  
+大肥鱼只负责「怎么说话」，不负责「怎么连微信/抖音」。  
 任何中转服务、开源框架、自写脚本，只要能按本文的格式收发 JSON，就能把她接进去。
 
 ```
-微信/抖音 ──> 你的中转服务 ──POST /webhook/{platform}──> 鲸鲸
+微信/抖音 ──> 你的中转服务 ──POST /webhook/{platform}──> 大肥鱼
                                                         │
 微信/抖音 <── 你的中转服务 <──POST {outboundUrl}──────────┘
                               （或者直接用 HTTP 响应里的 reply）
@@ -39,7 +39,7 @@ Token 不对返回 `403`。没配 token 时不校验（只建议本机调试这�
 | `chat_type` | `chatType` `type` `is_group` `from_group` | `group` / `private`，有 `room_id` 时默认 group |
 | `user_id` | `sender_id` `from` `wxid` `open_id` | 发送者 id |
 | `nickname` | `sender_name` `user_name` `name` | 发送者昵称（记忆里用这个） |
-| `at_me` | `atMe` `is_at` `mentioned` | 是否 @ 了她（也可以直接让文本里带「鲸鲸」） |
+| `at_me` | `atMe` `is_at` `mentioned` | 是否 @ 了她（也可以直接让文本里带「大肥鱼」） |
 | `reply_to_bot` | `quote_from_bot` | 是否回复了她的消息 |
 | `msg_id` | `message_id` `id` | 消息唯一 id，用来去重，重试也只会回一次 |
 | `chat_title` | `room_name` `group_name` | 群名（写进提示词，让她知道在哪个群） |
@@ -54,7 +54,7 @@ Token 不对返回 `403`。没配 token 时不校验（只建议本机调试这�
   "chat_type": "group",
   "user_id": "wxid_abc",
   "nickname": "阿螈",
-  "text": "@鲸鲸 你说人为什么要上班啊",
+  "text": "@大肥鱼 你说人为什么要上班啊",
   "msg_id": "msg_789",
   "chat_title": "深海鱼塘"
 }
@@ -101,7 +101,7 @@ Token 正确时原样返回 `12345`；`echostr` 参数同样支持。
 
 ## 二、发消息：`POST {outboundUrl}`
 
-配了 `gateway.{platform}.outboundUrl` 后，鲸鲸每说一句就会 POST 一次：
+配了 `gateway.{platform}.outboundUrl` 后，大肥鱼每说一句就会 POST 一次：
 
 ```json
 {
@@ -111,7 +111,7 @@ Token 正确时原样返回 `12345`；`echostr` 参数同样支持。
   "text": "整条回复的完整文本",
   "bubbles": ["第一句", "第二句"],
   "reply_to": "msg_789",
-  "bot": "鲸鲸",
+  "bot": "大肥鱼",
   "ts": 1719400000000
 }
 ```
@@ -160,7 +160,7 @@ node scripts/mock-gateway.js --demo
 ```bat
 curl -X POST "http://127.0.0.1:8787/webhook/wechat?token=change-me-wechat" ^
   -H "Content-Type: application/json" ^
-  -d "{\"chat_id\":\"room_1\",\"chat_type\":\"group\",\"user_id\":\"u1\",\"nickname\":\"阿螈\",\"text\":\"@鲸鲸 在吗\",\"msg_id\":\"m1\"}"
+  -d "{\"chat_id\":\"room_1\",\"chat_type\":\"group\",\"user_id\":\"u1\",\"nickname\":\"阿螈\",\"text\":\"@大肥鱼 在吗\",\"msg_id\":\"m1\"}"
 ```
 
 > cmd 里发中文容易乱码。Windows PowerShell 5.1 传参也会把中文转成 GBK。  
@@ -172,7 +172,7 @@ curl -X POST "http://127.0.0.1:8787/webhook/wechat?token=change-me-wechat" ^
 curl -X POST "http://127.0.0.1:8787/webhook/wechat" \
   -H "Content-Type: application/json" \
   -H "x-bot-token: change-me-wechat" \
-  -d '{"chat_id":"room_1","chat_type":"group","nickname":"阿螈","text":"@鲸鲸 在吗","msg_id":"m1"}'
+  -d '{"chat_id":"room_1","chat_type":"group","nickname":"阿螈","text":"@大肥鱼 在吗","msg_id":"m1"}'
 ```
 
 ---

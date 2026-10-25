@@ -2,7 +2,7 @@
 
 /**
  * 通用 HTTP 网关适配器：把微信/抖音中转服务发来的 JSON 变成统一消息，
- * 再把鲸鲸的回复 POST 回中转服务。
+ * 再把大肥鱼的回复 POST 回中转服务。
  *
  * 收消息：POST /webhook/{platform}  （协议见 docs/GATEWAY.md）
  * 发消息：POST {gateway.outboundUrl}  JSON:
@@ -169,7 +169,7 @@ class Gateway {
       bubbles,
       reply_to: replyTo,
       reply_to_name: senderName,
-      bot: '鲸鲸',
+      bot: '大肥鱼',
       ts: Date.now(),
     };
     if (!this.options.outboundUrl) {

@@ -1,4 +1,4 @@
-﻿# 鲸鲸 · 冒烟测试（需要服务已经在运行）
+﻿# 大肥鱼 · 冒烟测试（需要服务已经在运行）
 # 用法（Windows PowerShell）：
 #   powershell -ExecutionPolicy Bypass -File scripts\smoke.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts\smoke.ps1 -BaseUrl http://127.0.0.1:8788
@@ -62,11 +62,11 @@ function Check([string]$name, [scriptblock]$body) {
   }
 }
 
-Write-Host "`n🐋 鲸鲸冒烟测试 → $BaseUrl" -ForegroundColor Cyan
+Write-Host "`n🐋 大肥鱼冒烟测试 → $BaseUrl" -ForegroundColor Cyan
 
 Check '首页 HTML' {
   $html = CurlText "$BaseUrl/"
-  if ($html -notmatch '鲸鲸') { throw '页面里没有找到「鲸鲸」' }
+  if ($html -notmatch '大肥鱼') { throw '页面里没有找到「大肥鱼」' }
   "长度 $($html.Length) 字符"
 }
 
@@ -114,7 +114,7 @@ Check '群聊没被 @ 时保持安静' {
 }
 
 Check '群聊被 @ 时开口' {
-  $body = '{"text":"@鲸鲸 在吗","mode":"group","sessionId":"smoke","senderName":"海胆酱","atMe":true}'
+  $body = '{"text":"@大肥鱼 在吗","mode":"group","sessionId":"smoke","senderName":"海胆酱","atMe":true}'
   $sse = CurlText "$BaseUrl/api/chat" 'POST' $body
   if ($sse -notmatch '"type":"done"') { throw '没有收到 done 事件' }
   'ok'
@@ -143,7 +143,7 @@ if (Test-Path $configPath) {
 }
 
 Check '微信网关 webhook（token 校验 + 解析 + 回复）' {
-  $body = '{"chat_id":"room_smoke","chat_type":"group","user_id":"u1","nickname":"阿螈","text":"@鲸鲸 在吗","msg_id":"smoke-1"}'
+  $body = '{"chat_id":"room_smoke","chat_type":"group","user_id":"u1","nickname":"阿螈","text":"@大肥鱼 在吗","msg_id":"smoke-1"}'
   $data = (CurlText "$BaseUrl/webhook/wechat" 'POST' $body @("x-bot-token: $token")) | ConvertFrom-Json
   if (-not $data.ok) { throw 'ok != true' }
   if ($data.skipped) {

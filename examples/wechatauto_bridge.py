@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-鲸鲸 · 微信 4.x 桥接（不注入、不修改微信）
+大肥鱼 · 微信 4.x 桥接（不注入、不修改微信）
 
 原理：
   - 读消息：解密微信 4.x 本地 SQLite 数据库（只读，需要微信处于登录状态）
@@ -10,7 +10,7 @@
 前置：
   1. WeChat 4.x 已登录（建议用小号）
   2. 已装依赖：pip install wechatauto-replica requests
-  3. 鲸鲸服务已启动（双击 启动鲸鱼娘.bat）
+  3. 大肥鱼服务已启动（双击 启动鲸鱼娘.bat）
   4. config.json 里 gateway.wechat.enabled = true（脚本会读 token）
 
 用法：
@@ -35,13 +35,14 @@ import sys
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(ROOT, "config.json")
 LOG_FILE = os.path.join(ROOT, "data", "wechat-bridge-4x.log")
 
-# 只回复这些会话（留空 = 全部会话都交给鲸鲸判断）
+# 只回复这些会话（留空 = 全部会话都交给大肥鱼判断）
 # 例如 ["文件传输助手", "深海鱼塘"]
 ONLY_CHATS = []
 
@@ -51,6 +52,9 @@ DIGEST_MINUTES = 30
 MASTER_WXID = ''
 # 超过这么多秒的旧消息直接不回，避免“回上一条”
 STALE_AFTER = float(os.environ.get("WHALE_STALE_AFTER", "4"))
+# 拟人回复延迟的默认值（config.json 读不到时用这套）
+HUMAN_DELAY = True
+HUMAN_DELAY_MAX = 18.0
 try:
     _cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config.json")
     with open(_cfg_path, "r", encoding="utf-8-sig") as _f:
@@ -67,12 +71,13 @@ try:
     QUOTE_REPLY = bool(_wechat.get("quoteReply", True))
     LOW_BATTERY_PCT = float(_wechat.get("lowBatteryPercent", 5))
     GOODNIGHT_TEXT = str(_wechat.get("goodnightText", "晚安，电量快没了，我先睡啦，明天见～"))
-    _share = _cfg.get("share") or {}
-    SHARE_ENABLED = bool(_share.get("enabled", True))
-    SHARE_EVERY = float(_share.get("everyMinutes", 120))
     _digest = _wechat.get("digestMinutes", 30)
     DIGEST_MINUTES = float(_digest) if isinstance(_digest, (int, float)) else 30.0
     MASTER_WXID = (((_cfg.get("persona") or {}).get("master") or {}).get("wxids") or [''])[0]
+    # 拟人回复延迟：阅读对方消息 + 打字的时间，可配 chat.humanDelay {enabled, maxSec}
+    _hd = (_cfg.get("chat") or {}).get("humanDelay") or {}
+    HUMAN_DELAY = bool(_hd.get("enabled", True))
+    HUMAN_DELAY_MAX = float(_hd.get("maxSec", 18))
 except Exception:
     pass
 
@@ -189,6 +194,17 @@ def duplicate_guard(chat_username, sender, content):
                 if now - v > 600:
                     _recent_dup.pop(k, None)
         return now - last < DUP_REPLY_WINDOW
+
+
+def human_delay_seconds(incoming_text, reply_text):
+    """拟人延迟 = 阅读时间（按对方消息长度）+ 反应间隙 + 打字时间（按回复长度）。
+    让对方感觉她真的在读、在想、在打字，而不是秒回。"""
+    if not HUMAN_DELAY:
+        return 0.0
+    read = min(6.0, 0.8 + 0.12 * len(incoming_text or ""))          # 读消息：约每秒 8 字
+    think = random.uniform(0.5, 1.8)                                 # 反应一下
+    typing = min(12.0, len(reply_text or "") * random.uniform(0.15, 0.25))  # 打字：约每秒 4~7 字
+    return min(HUMAN_DELAY_MAX, read + think + typing)
 
 
 def rate_guard(chat_username):
@@ -384,7 +400,7 @@ def main():
     token = gw.get("inboundToken", "")
     bot_url = build_bot_url(cfg)
     aliases = ((cfg.get("persona") or {}).get("aliases") or []) + [
-        ((cfg.get("persona") or {}).get("name") or "鲸鲸")
+        ((cfg.get("persona") or {}).get("name") or "大肥鱼")
     ]
 
     log("连接微信 4.x 数据库（只读）…")
@@ -1342,7 +1358,7 @@ def main():
             if "拍了拍" in content and "<url>" not in content:
                 log("跳过拍一拍提示：", content[:24])
                 return
-            # 只把真正的 @ 当作 at_me；普通句子里提到「鲸鲸」不能误触发。
+            # 只把真正的 @ 当作 at_me；普通句子里提到「大肥鱼」不能误触发。
             # WeChat 会在 @昵称 后插入 U+2005，先换成普通空格再判定。
             import re as _mention_re
             _at_text = content.replace("\u2005", " ")
@@ -1408,12 +1424,12 @@ def main():
                 )
                 data = r.json()
             except Exception as e:
-                log("请求鲸鲸失败：", repr(e))
+                log("请求大肥鱼失败：", repr(e))
                 return
 
             if data.get("action") != "reply" or not data.get("reply"):
                 if is_group and addressed:
-                    log("鲸鲸没接话：", nickname, "→", content[:20], "|", data.get("reason"))
+                    log("大肥鱼没接话：", nickname, "→", content[:20], "|", data.get("reason"))
                 return
 
             target = display_name(username)
@@ -1425,6 +1441,12 @@ def main():
                 log("这一分钟回太多了，先停一下：", target)
                 return
             log("回复", ("群" if is_group else "私聊"), target, "→", nickname, "：", (bubbles[0] or "")[:40])
+
+            # 拟人延迟：读完消息 + 组织语言 + 打字第一条，别秒回
+            delay = human_delay_seconds(content, bubbles[0] or "")
+            if delay > 0:
+                log("拟人延迟 %.1fs（阅读+打字）" % delay)
+                time.sleep(delay)
 
             first = True
             for line in bubbles:
@@ -1439,14 +1461,15 @@ def main():
                             break
                     if send_at(mention, body, target, username):
                         first = False
-                        time.sleep(0.6)
+                        time.sleep(max(0.8, 0.2 * len(bubbles[1]) if len(bubbles) > 1 else 0.8))
                         continue
                     log("真 @ 失败，退回普通文本：", mention)
                     if not line.startswith("@"):
                         line = "@%s %s" % (mention, line)
                 send_text(line, target, username, quote_text=(content if first and QUOTE_REPLY else None))
                 first = False
-                time.sleep(0.6)
+                # 连发下一条前的间隔 = 打下一条的时间（短句快、长句慢）
+                time.sleep(max(0.8, min(10.0, 0.2 * len(line))))
         except Exception as e:
             log("处理消息异常：", repr(e))
 
@@ -1493,63 +1516,6 @@ def main():
             time.sleep(0.3)
         if NOTIFIED:
             log("已通知最近的聊天：", "、".join(n for _, n in NOTIFIED))
-
-    def share_watch():
-        """每隔一段时间自己刷 B 站热门，挑一个没分享过的发到最近活跃的群/私聊。"""
-        state_file = os.path.join(ROOT, "data", "share-state.json")
-        try:
-            with open(state_file, "r", encoding="utf-8") as f:
-                last = float(json.load(f).get("lastTs") or 0)
-        except Exception:
-            last = 0.0
-        if not last:
-            # 首次启动：5 分钟后再发，别一开机就刷屏
-            last = time.time() - SHARE_EVERY * 60 + 60
-        while True:
-            time.sleep(30)
-            if not SHARE_ENABLED:
-                continue
-            if time.time() - last < SHARE_EVERY * 60:
-                continue
-            if game_running() or away_active() or foreground_is_fullscreen():
-                continue
-            target = recent_chats(limit=1, within=7200)
-            if not target:
-                log("没有最近活跃的会话，这次先不分享")
-                last = time.time()
-                continue
-            u, name = target[0]
-            try:
-                base = bot_url.rsplit("/webhook", 1)[0]
-                r = requests.get(base + "/api/share?chat=" + urllib.parse.quote(u), timeout=40)
-                data = r.json()
-            except Exception as e:
-                log("拉取视频失败：", repr(e))
-                last = time.time()
-                continue
-            video = data.get("video")
-            last = time.time()
-            try:
-                with open(state_file, "w", encoding="utf-8") as f:
-                    json.dump({"lastTs": last}, f)
-            except Exception:
-                pass
-            if not video:
-                log("这次没挑到合适的视频")
-                continue
-            title = str(video.get("title") or "")[:60]
-            link = str(video.get("url") or "")
-            topic = str(data.get("topic") or "").strip()
-            comment = str(data.get("comment") or "").strip()
-            if not comment:
-                comment = random.choice([
-                    "这个看着还行，评论区比视频有意思",
-                    "刚刷到，你们看看",
-                    "有点意思，我接着刷了",
-                ])
-            text = "%s\n%s" % (link, comment)
-            log("主动分享视频 →", name, str(video.get("title"))[:30])
-            send_text(text, name, u)
 
     BATTERY_SENT = {"done": False}
 
@@ -1742,14 +1708,64 @@ def main():
                 log("补发排队消息 →", target)
                 send_text(text, target, uname, force=True)
 
+    # ---- 主动消息回环服务：大肥鱼服务端 POST /send {chat, text} → 发到指定会话 ----
+    # 只监听 127.0.0.1，不暴露给局域网；发送走 send_text 的 send_lock，和正常回复串行
+    PROACTIVE_PORT = int(os.environ.get("WHALE_PROACTIVE_PORT", "8788"))
+
+    class ProactiveHandler(BaseHTTPRequestHandler):
+        def log_message(self, *args):  # 静音默认访问日志，主动消息自己记
+            pass
+
+        def _reply(self, code, obj):
+            data = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_GET(self):
+            if self.path == "/health":
+                return self._reply(200, {"ok": True})
+            return self._reply(404, {"ok": False, "error": "not found"})
+
+        def do_POST(self):
+            if self.path != "/send":
+                return self._reply(404, {"ok": False, "error": "not found"})
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+            except Exception as e:
+                return self._reply(400, {"ok": False, "error": "bad json: %r" % e})
+            chat = str(body.get("chat") or "").strip()
+            text = str(body.get("text") or "").strip()
+            if not chat or not text:
+                return self._reply(400, {"ok": False, "error": "chat 和 text 不能为空"})
+            log("主动消息 →", chat, "：", text[:40])
+            try:
+                # 不 force：你在游戏/全屏时先排队，退回桌面再补发，不抢焦点
+                ok = send_text(text, chat, "", force=False)
+            except Exception as e:
+                log("主动消息发送异常：", repr(e))
+                return self._reply(500, {"ok": False, "error": repr(e)})
+            return self._reply(200 if ok else 500, {"ok": bool(ok)})
+
+    def proactive_server():
+        try:
+            srv = ThreadingHTTPServer(("127.0.0.1", PROACTIVE_PORT), ProactiveHandler)
+            log("主动消息回环服务已启动：http://127.0.0.1:%d/send" % PROACTIVE_PORT)
+            srv.serve_forever()
+        except Exception as e:
+            log("主动消息回环服务启动失败（主动消息将不可用）：", repr(e))
+
+    threading.Thread(target=proactive_server, daemon=True).start()
     threading.Thread(target=flush_pending, daemon=True).start()
     threading.Thread(target=game_watch, daemon=True).start()
     threading.Thread(target=digest_watch, daemon=True).start()
     threading.Thread(target=warmup, daemon=True).start()
     threading.Thread(target=send_watchdog, daemon=True).start()
     threading.Thread(target=battery_watch, daemon=True).start()
-    threading.Thread(target=share_watch, daemon=True).start()
-    log("已启动。鲸鲸地址：", bot_url)
+    log("已启动。大肥鱼地址：", bot_url)
 
     try:
         while True:

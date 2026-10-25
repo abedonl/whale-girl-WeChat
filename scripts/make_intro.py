@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""鲸鲸介绍片生成器：PIL 逐帧渲染 + Windows 中文 TTS + ffmpeg 合成。
+"""大肥鱼介绍片生成器：PIL 逐帧渲染 + Windows 中文 TTS + ffmpeg 合成。
 
 用法：
     python scripts/make_intro.py            # 生成 1280x720 成片
     python scripts/make_intro.py --hd       # 1920x1080（更慢）
 
 输出：
-    release/intro/鲸鲸介绍.mp4
+    release/intro/大肥鱼介绍.mp4
     release/intro/cover.png   （B站封面 1146x717）
 """
 import json
@@ -33,7 +33,7 @@ DIM = (150, 190, 215)
 
 # 每一幕：旁白 + 画面
 SCENES = [
-    {"voice": "她叫鲸鲸，一个从深海爬上来的鲸鱼娘。", "title": "鲸鲸", "sub": "从深海爬上来的鲸鱼娘", "kind": "title"},
+    {"voice": "她叫大肥鱼，一个从深海爬上来的鲸鱼娘。", "title": "大肥鱼", "sub": "从深海爬上来的鲸鱼娘", "kind": "title"},
     {"voice": "蓝头发，鲸尾发夹，怀里永远抱着一只小蓝鲸。",
      "title": "她是谁", "sub": "深蓝长卷发 · 鲸尾发夹 · 群里那个不太正经的群友", "kind": "text"},
     {"voice": "会聊天，不端着。一句话拆成两三条发，像真人随手打字。",
@@ -48,7 +48,7 @@ SCENES = [
      "title": "会记事", "lines": ["我住在杭州，喜欢吃辣", "杭州啊，那可以去龙翔桥试试，辣得够劲", "我住哪来着？——你刚说住杭州，记着呢"], "kind": "chat"},
     {"voice": "背后是真模型在跑。DeepSeek、通义千问、智谱，一句话就能换。",
      "title": "技术栈", "sub": "DeepSeek · 千问 · 智谱视觉 · 微信桥接 · 本地记忆", "kind": "text"},
-    {"voice": "她不是客服，是个会闹脾气的群友。B站搜鲸鲸，来看她。",
+    {"voice": "她不是客服，是个会闹脾气的群友。B站搜大肥鱼，来看她。",
      "title": "来找她玩", "sub": "一个会怼人的鲸鱼娘 · 可持续调教", "kind": "end"},
 ]
 
@@ -193,7 +193,7 @@ def render_frame(bg, size, scene, t_in, dur, fonts, frame_idx):
         text_center(d, (w // 2, int(h * 0.46)), scene["title"], fonts["huge"], WHITE, a)
         text_center(d, (w // 2, int(h * 0.60)), scene.get("sub", ""), fonts["mid"], CYAN, a)
         if kind == "end":
-            text_center(d, (w // 2, int(h * 0.74)), "B站 / 微信 搜「鲸鲸」", fonts["small"], DIM, a)
+            text_center(d, (w // 2, int(h * 0.74)), "B站 / 微信 搜「大肥鱼」", fonts["small"], DIM, a)
     else:
         text_center(d, (w // 2, int(h * 0.15)), scene["title"], fonts["big"], CYAN, a)
         lines = scene.get("lines") or []
@@ -280,7 +280,7 @@ def main():
 
     print("③ 渲染画面（%dx%d，约 %.0f 秒）" % (W, H, total))
     bg = bg_image(W, H)
-    out_mp4 = os.path.join(OUT_DIR, "鲸鲸介绍.mp4")
+    out_mp4 = os.path.join(OUT_DIR, "大肥鱼介绍.mp4")
     ff = None
     try:
         import imageio_ffmpeg

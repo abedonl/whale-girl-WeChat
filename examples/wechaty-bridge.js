@@ -3,7 +3,7 @@
 /**
  * Wechaty 微信桥接示例（模板）
  *
- * 作用：用 Wechaty 扫码登录一个微信账号，把消息转给本机的鲸鲸，
+ * 作用：用 Wechaty 扫码登录一个微信账号，把消息转给本机的大肥鱼，
  *       再把她的回复发回微信（群聊会 @ 提问的人）。
  *
  * 准备：
@@ -15,7 +15,7 @@
  * 注意：
  *   - 这是一个「模板」，不同 puppet 的 API 细节可能不同，需要微调。
  *   - 微信个人号自动化不是官方接口，有封号风险，请用小号测试。
- *   - 群里所有消息都会转给鲸鲸「旁听」，由她自己的规则决定回不回；
+ *   - 群里所有消息都会转给大肥鱼「旁听」，由她自己的规则决定回不回；
  *     如果你流量大，可以把 SEND_ALL_GROUP_MESSAGES 改成 false，只转被叫到的。
  */
 
@@ -40,7 +40,7 @@ const gateway = (config.gateway && config.gateway.wechat) || {};
 const PORT = (config.server && config.server.port) || 8787;
 const BOT_URL = `http://127.0.0.1:${PORT}/webhook/wechat`;
 const TOKEN = gateway.inboundToken || '';
-const BOT_NAME = (config.persona && config.persona.name) || '鲸鲸';
+const BOT_NAME = (config.persona && config.persona.name) || '大肥鱼';
 const ALIASES = ((config.persona && config.persona.aliases) || []).concat([BOT_NAME]);
 
 function postJson(urlString, payload, headers = {}) {
@@ -65,12 +65,12 @@ function postJson(urlString, payload, headers = {}) {
           try {
             resolve(JSON.parse(text));
           } catch {
-            reject(new Error('鲸鲸返回了非 JSON：' + text.slice(0, 200)));
+            reject(new Error('大肥鱼返回了非 JSON：' + text.slice(0, 200)));
           }
         });
       }
     );
-    req.on('timeout', () => req.destroy(new Error('请求鲸鲸超时')));
+    req.on('timeout', () => req.destroy(new Error('请求大肥鱼超时')));
     req.on('error', reject);
     req.end(body);
   });
@@ -139,7 +139,7 @@ async function main() {
 
       const result = await postJson(BOT_URL, payload, TOKEN ? { 'x-bot-token': TOKEN } : {});
       if (!result || result.action !== 'reply' || !result.reply) {
-        console.log(`  · 群${isGroup ? '' : '私'}聊 ${nickname}：${text.slice(0, 30)} → 鲸鲸没接话（${result && result.reason}）`);
+        console.log(`  · 群${isGroup ? '' : '私'}聊 ${nickname}：${text.slice(0, 30)} → 大肥鱼没接话（${result && result.reason}）`);
         return;
       }
 
@@ -157,7 +157,7 @@ async function main() {
   });
 
   await bot.start();
-  console.log(`🐋 桥接已启动，鲸鲸地址：${BOT_URL}`);
+  console.log(`🐋 桥接已启动，大肥鱼地址：${BOT_URL}`);
 }
 
 main().catch((err) => {

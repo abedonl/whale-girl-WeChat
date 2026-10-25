@@ -26,13 +26,23 @@ function pushLog(line) {
   if (recentLog.length > 50) recentLog.shift();
 }
 
-function findPython() {
-  // 优先用项目自带的 runtime（如果将来打包进去），否则用系统 python
-  const candidates = [
-    path.join(process.cwd(), 'runtime', 'python.exe'),
-    'py',
-    'python',
-  ];
+function findPython(root) {
+  // 优先用项目自带的 runtime\python\python.exe（已预装 wechatauto 等依赖）；
+  // root 由调用方传入（项目根目录），避免依赖 process.cwd()（打包后不可靠）
+  const candidates = [];
+  if (root) {
+    // 开发模式：root 就是项目根
+    candidates.push(path.join(root, 'runtime', 'python', 'python.exe'));
+    candidates.push(path.join(root, 'runtime', 'python.exe'));
+    // Electron 打包模式：root = resources/app，runtime 被复制到 exe 同级目录
+    // 即 root/../../runtime/python/python.exe
+    candidates.push(path.join(root, '..', '..', 'runtime', 'python', 'python.exe'));
+    candidates.push(path.join(root, '..', '..', 'runtime', 'python.exe'));
+  }
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, '..', 'runtime', 'python', 'python.exe'));
+  }
+  candidates.push('py', 'python');
   return candidates;
 }
 
@@ -46,9 +56,9 @@ function status() {
   };
 }
 
-async function detectPython() {
+async function detectPython(root) {
   const { execFile } = require('node:child_process');
-  for (const cmd of findPython()) {
+  for (const cmd of findPython(root)) {
     const ok = await new Promise((resolve) => {
       execFile(cmd, ['--version'], { timeout: 5000 }, (err, stdout, stderr) => {
         if (err) return resolve(false);
@@ -61,6 +71,36 @@ async function detectPython() {
   return null;
 }
 
+/** 启动前预检：检查 Python 与必需依赖是否就位。返回可操作的诊断结果。 */
+async function precheck(root) {
+  const { execFile } = require('node:child_process');
+  const py = await detectPython(root);
+  const result = { python: null, deps: {}, pathWarning: '', ready: false, hint: '' };
+  if (!py) {
+    result.hint = '未检测到 Python 3。请先安装 Python 3.10+ 并勾选「Add to PATH」。';
+    return result;
+  }
+  result.python = py;
+  // 检查必需依赖
+  const checkDep = (mod) => new Promise((resolve) => {
+    const args = py === 'py' ? ['-3', '-c', `import ${mod}`] : ['-c', `import ${mod}`];
+    execFile(py, args, { timeout: 8000 }, (err) => resolve(!err));
+  });
+  result.deps.requests = await checkDep('requests');
+  // pip 包名是 wechatauto-replica，import 名是 wechatauto
+  result.deps.wechatauto = await checkDep('wechatauto');
+  const missing = [];
+  if (!result.deps.requests) missing.push('requests');
+  if (!result.deps.wechatauto) missing.push('wechatauto-replica');
+  if (missing.length) {
+    result.hint = `缺少依赖：${missing.join('、')}。请先运行：${py} -m pip install ${missing.join(' ')}`;
+    return result;
+  }
+  result.ready = true;
+  result.hint = `环境就绪（${py}），可以启动桥接。`;
+  return result;
+}
+
 async function start({ root, port, logger }) {
   if (child && !child.killed) {
     return { ok: true, already: true, status: status() };
@@ -70,7 +110,7 @@ async function start({ root, port, logger }) {
     lastError = '找不到 examples/wechatauto_bridge.py';
     return { ok: false, error: lastError };
   }
-  const py = await detectPython();
+  const py = await detectPython(root);
   if (!py) {
     lastError = '未检测到 Python 3，请先安装 Python 3.10+ 并加入 PATH';
     return { ok: false, error: lastError };
@@ -80,6 +120,9 @@ async function start({ root, port, logger }) {
     ...process.env,
     WHALE_BOT_URL: `http://127.0.0.1:${port}/webhook/wechat`,
     PYTHONUNBUFFERED: '1',
+    // 强制 Python 用 UTF-8 输出，否则 Windows 默认 GBK 会导致前端日志乱码
+    PYTHONIOENCODING: 'utf-8',
+    PYTHONUTF8: '1',
   };
   recentLog = [];
   lastError = '';
@@ -118,4 +161,4 @@ function stop({ logger }) {
   return { ok: true };
 }
 
-module.exports = { start, stop, status };
+module.exports = { start, stop, status, precheck };

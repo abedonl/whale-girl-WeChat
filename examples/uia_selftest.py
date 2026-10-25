@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""鲸鲸 · 微信发送通道自检（UIA 这条路）
+"""大肥鱼 · 微信发送通道自检（UIA 这条路）
 
 双击项目根目录的「一键修复并自检.bat」就会跑这个脚本。它做五件事：
 
@@ -147,7 +147,7 @@ def main():
             except Exception:                    # noqa: BLE001
                 cls = "?"
             low = (title + " " + cls).lower()
-            # 微信 4.x 主窗标题是账号昵称（本机是「哦鲸鲸」），托盘里还不可见，
+            # 微信 4.x 主窗标题是账号昵称（本机是「哦大肥鱼」），托盘里还不可见，
             # 所以这里靠 Win32 类名兜底，别按标题筛。
             if not (("微信" in title) or ("weixin" in low)
                     or cls.lower().startswith("qt51514")):
@@ -312,7 +312,7 @@ def main():
     # ---------------------------------------------------------------- 5. 发送
     section("5. 用 UIA 给「文件传输助手」发一条测试消息")
     target = "文件传输助手"
-    text = "鲸鲸自检 %s" % time.strftime("%H:%M:%S")
+    text = "大肥鱼自检 %s" % time.strftime("%H:%M:%S")
     sent = False
     state = {"opened": None, "sent": None}
 

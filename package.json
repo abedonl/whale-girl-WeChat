@@ -2,7 +2,7 @@
     "name": "whale-girl-bot",
     "version": "3.0.4",
     "private": false,
-    "description": "鲸鲸 —— 可接微信群 / B 站分享的 DeepSeek 鲸鱼娘聊天机器人",
+    "description": "大肥鱼 —— 可接微信群 / 主动消息的 DeepSeek 鲸鱼娘聊天机器人",
     "main": "electron/main.js",
     "type": "commonjs",
     "scripts": {
@@ -21,7 +21,6 @@
         "chatbot",
         "wechat",
         "wechat-bot",
-        "bilibili",
         "llm"
     ],
     "license": "MIT",
@@ -36,7 +35,7 @@
     },
     "build": {
         "appId": "com.whalegirl.bot",
-        "productName": "鲸鲸",
+        "productName": "大肥鱼",
         "directories": {
             "output": "release2"
         },
@@ -66,7 +65,7 @@
             ]
         },
         "portable": {
-            "artifactName": "鲸鲸-${version}-portable.exe"
+            "artifactName": "大肥鱼-${version}-portable.exe"
         }
     }
 }

@@ -83,7 +83,7 @@ test('群聊里没被叫到就只看不说，但会旁听记住上下文', async
 
 test('@ 或叫名字会触发回复，且回复里不该带 @ 前缀', async () => {
   const { bot, cleanup } = makeBot();
-  const a = await bot.decide(groupMsg('@鲸鲸 在吗', { atMe: true }));
+  const a = await bot.decide(groupMsg('@大肥鱼 在吗', { atMe: true }));
   assert.equal(a.action, 'reply');
   assert.ok(!a.msg.cleanText.includes('@'));
   const b = await bot.decide(groupMsg('鲸娘，你觉得呢'));
@@ -104,15 +104,15 @@ test('重复消息 id 会被去重', async () => {
 
 test('闭麦 / 开麦 命令生效', async () => {
   const { bot, cleanup } = makeBot();
-  const mute = await bot.decide(groupMsg('@鲸鲸 闭麦 1', { atMe: true }));
+  const mute = await bot.decide(groupMsg('@大肥鱼 闭麦 1', { atMe: true }));
   assert.equal(mute.action, 'command');
   assert.equal(mute.commandType, 'mute');
-  const during = await bot.decide(groupMsg('@鲸鲸 在吗', { atMe: true }));
+  const during = await bot.decide(groupMsg('@大肥鱼 在吗', { atMe: true }));
   assert.equal(during.action, 'ignore');
   assert.equal(during.reason, 'muted');
-  const unmute = await bot.decide(groupMsg('@鲸鲸 开麦', { atMe: true }));
+  const unmute = await bot.decide(groupMsg('@大肥鱼 开麦', { atMe: true }));
   assert.equal(unmute.commandType, 'unmute');
-  const after = await bot.decide(groupMsg('@鲸鲸 在吗', { atMe: true }));
+  const after = await bot.decide(groupMsg('@大肥鱼 在吗', { atMe: true }));
   assert.equal(after.action, 'reply');
   cleanup();
 });
@@ -169,7 +169,7 @@ test('命令识别覆盖常见写法', () => {
 
 test('只 @ 不说话会给一个可爱的回应', async () => {
   const { bot, cleanup } = makeBot();
-  const decision = await bot.decide(groupMsg('@鲸鲸', { atMe: true }));
+  const decision = await bot.decide(groupMsg('@大肥鱼', { atMe: true }));
   assert.equal(decision.action, 'reply');
   assert.ok(decision.canned.length > 0);
   cleanup();
@@ -190,10 +190,10 @@ test('真实模式下：会组装群聊上下文并调用模型', async () => {
   const { bot, store, cleanup } = makeBot({ llm });
   const first = await bot.decide(groupMsg('今天加班好累'));
   assert.equal(first.action, 'ignore');
-  const decision = await bot.decide(groupMsg('@鲸鲸 你说呢', { atMe: true }));
+  const decision = await bot.decide(groupMsg('@大肥鱼 你说呢', { atMe: true }));
   assert.equal(decision.action, 'reply');
   assert.equal(decision.mock, false);
-  const result = await bot.handle(groupMsg('@鲸鲸 那你呢', { atMe: true }));
+  const result = await bot.handle(groupMsg('@大肥鱼 那你呢', { atMe: true }));
   assert.equal(result.action, 'reply');
   // reply 现在等于真正发出去的文本（波浪号会被清掉），不再是模型原文
   assert.match(result.reply, /收到啦，我在的/);
@@ -219,7 +219,7 @@ test('长回复会被拆成两条气泡（群聊更短）', async () => {
     },
   };
   const { bot, cleanup } = makeBot({ llm, config: makeConfig({ chat: { groupMaxChars: 20, privateMaxChars: 20, maxBubbles: 2 } }) });
-  const result = await bot.handle(groupMsg('@鲸鲸 讲点深海的', { atMe: true }));
+  const result = await bot.handle(groupMsg('@大肥鱼 讲点深海的', { atMe: true }));
   assert.equal(result.action, 'reply');
   assert.ok(result.bubbles.length >= 1 && result.bubbles.length <= 2);
   assert.ok(result.bubbles.join('').length > 0);
@@ -238,7 +238,7 @@ test('冷却时间内的主动接话会被跳过，@ 她可以突破冷却', asy
   bot.finalize(first, first.text);
   const second = await bot.decide(groupMsg('是啊挺暖和的'));
   assert.equal(second.action, 'ignore');
-  const addressed = await bot.decide(groupMsg('@鲸鲸 你觉得呢', { atMe: true }));
+  const addressed = await bot.decide(groupMsg('@大肥鱼 你觉得呢', { atMe: true }));
   assert.equal(addressed.action, 'reply');
   store.close();
   fs.rmSync(dir, { recursive: true, force: true });
@@ -411,7 +411,7 @@ test('管理员可以按群名禁言，禁言后那个群完全不说话', async
   assert.equal(g.action, 'ignore');
   assert.equal(g.reason, 'muted_group');
 
-  const g2 = await bot.decide(groupMsg('@鲸鲸 在吗', { chatTitle: '别的群' }));
+  const g2 = await bot.decide(groupMsg('@大肥鱼 在吗', { chatTitle: '别的群' }));
   assert.equal(g2.action, 'reply');
 
   const u = await bot.decide(master('解除禁言 鼠标'));
@@ -479,7 +479,7 @@ test('普通人把昵称改成主人名也不能提权', async () => {
 
 test('主人骂她也不会进入回怼库', async () => {
   const { bot, cleanup } = makeBot();
-  const result = await bot.handle(groupMsg('@鲸鲸 傻逼', {
+  const result = await bot.handle(groupMsg('@大肥鱼 傻逼', {
     atMe: true,
     senderName: 'Master',
     senderId: 'wxid_test_master',
@@ -491,7 +491,7 @@ test('主人骂她也不会进入回怼库', async () => {
 
 test('接话窗口只跟同一个人，不抢别人聊天', async () => {
   const { bot, cleanup } = makeBot();
-  await bot.decide(groupMsg('@鲸鲸', { atMe: true, senderName: '甲', senderId: 'u-a' }));
+  await bot.decide(groupMsg('@大肥鱼', { atMe: true, senderName: '甲', senderId: 'u-a' }));
   const same = await bot.decide(groupMsg('为什么不行', { senderName: '甲', senderId: 'u-a' }));
   assert.equal(same.action, 'reply');
   const other = await bot.decide(groupMsg('你吃饭了吗', { senderName: '乙', senderId: 'u-b' }));
@@ -504,7 +504,7 @@ test('同名群友单独 @ 时只恢复自己的上一条问题', async () => {
   const { bot, cleanup } = makeBot();
   await bot.decide(groupMsg('甲的问题是什么', { senderName: '同名', senderId: 'u-a' }));
   await bot.decide(groupMsg('乙的问题是什么', { senderName: '同名', senderId: 'u-b' }));
-  const recovered = await bot.decide(groupMsg('@鲸鲸', { atMe: true, senderName: '同名', senderId: 'u-a' }));
+  const recovered = await bot.decide(groupMsg('@大肥鱼', { atMe: true, senderName: '同名', senderId: 'u-a' }));
   assert.equal(recovered.msg.cleanText, '甲的问题是什么');
   cleanup();
 });

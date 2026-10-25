@@ -45,7 +45,7 @@ test('状态接口：默认是演示模式，两个网关都在', async () => {
   const data = await res.json();
   assert.equal(data.ok, true);
   assert.equal(data.mock, true);
-  assert.equal(data.name, '鲸鲸');
+  assert.equal(data.name, '大肥鱼');
   assert.ok(Array.isArray(data.gateways) && data.gateways.length === 2);
   assert.ok(data.webhookPaths.includes('/webhook/wechat'));
   await app.close();
@@ -82,7 +82,7 @@ test('网页群聊：没被 @ 返回 ignore，被 @ 才回复', async () => {
   assert.equal(data.reason, 'not_addressed');
 
   const events = await collectSse(app.url + '/api/chat', {
-    text: '@鲸鲸 你说呢',
+    text: '@大肥鱼 你说呢',
     mode: 'group',
     sessionId: 'test2',
     senderName: '海胆酱',
@@ -130,7 +130,7 @@ test('微信网关：token 校验 + 收到消息 + 回复发回中转服务', as
     chat_type: 'group',
     user_id: 'wxid_abc',
     nickname: '阿螈',
-    text: '@鲸鲸 在吗',
+    text: '@大肥鱼 在吗',
     msg_id: 'm1',
   };
 
@@ -287,7 +287,7 @@ test('调试台：状态接口能看到主人和模型信息', async () => {
   try {
   const s = await (await fetch(app.url + '/api/debug/state')).json();
   assert.equal(s.ok, true);
-  assert.equal(s.persona.name, '鲸鲸');
+  assert.equal(s.persona.name, '大肥鱼');
   assert.ok(s.persona.master.names.includes('Master'));
   assert.ok(s.persona.master.wxids.includes('wxid_test_master'));
   assert.equal(typeof s.llm.mock, 'boolean');
@@ -365,7 +365,7 @@ test('人设调教接口：读、改、恢复默认', async () => {
   try {
     const get1 = await (await fetch(app.url + '/api/persona')).json();
     assert.equal(get1.ok, true);
-    assert.equal(get1.persona.name, '鲸鲸');
+    assert.equal(get1.persona.name, '大肥鱼');
     assert.equal(typeof get1.persona.historyTurns, 'number');
     assert.ok(get1.persona.historyTurns >= 200, '私聊上下文默认应该够大');
     assert.ok(get1.persona.groupHistoryTurns >= 150, '群聊上下文默认应该够大');
@@ -375,8 +375,6 @@ test('人设调教接口：读、改、恢复默认', async () => {
     });
     const r = await (await post({
       name: '小鲸',
-      age: 20,
-      job: '咖啡店店员',
       personality: '话少、冷静、偶尔毒舌',
       preset: '高冷',
       text: '别用省略号',
@@ -390,7 +388,7 @@ test('人设调教接口：读、改、恢复默认', async () => {
     })).json();
     assert.equal(r.ok, true);
     assert.equal(r.persona.name, '小鲸');
-    assert.equal(r.persona.job, '咖啡店店员');
+    assert.equal(r.persona.personality, '话少、冷静、偶尔毒舌');
     assert.equal(r.persona.historyTurns, 12);
     assert.equal(r.persona.emotions, false);
     assert.equal(r.persona.links, false);
@@ -401,12 +399,11 @@ test('人设调教接口：读、改、恢复默认', async () => {
       body: JSON.stringify({ senderName: '路人', chatType: 'private', text: '在吗' }),
     })).json();
     assert.match(sys.system, /小鲸/);
-    assert.match(sys.system, /咖啡店店员/);
     assert.match(sys.system, /话少、冷静/);
 
     const reset = await (await post({ reset: true })).json();
     assert.equal(reset.ok, true);
-    assert.equal(reset.persona.name, '鲸鲸');
+    assert.equal(reset.persona.name, '大肥鱼');
     assert.equal(reset.persona.historyTurns, 200);
     assert.equal(reset.persona.groupHistoryTurns, 150);
   } finally {

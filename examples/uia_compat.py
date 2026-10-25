@@ -13,12 +13,12 @@ wechatauto-replica 1.2.7.0 认微信主窗要同时满足四个条件，本机�
 
 实测这台机器：
 
-    hwnd 527732  pid 29208  class=Qt51514QWindowIcon  title='哦鲸鲸'  visible=0   ← 真正的主窗
+    hwnd 527732  pid 29208  class=Qt51514QWindowIcon  title='哦大肥鱼'  visible=0   ← 真正的主窗
     hwnd 462296  pid 29208  class=Qt51514QWindowIcon  title='Weixin'  visible=0
     hwnd 1249038 pid 29208  class=Qt51514QWindowToolSaveBits  title='Weixin'  visible=0
 
 ① 主窗在托盘里时 visible=0 → 直接被 `IsWindowVisible` 筛掉；
-② 主窗标题是**账号昵称**（哦鲸鲸），不是「微信/Weixin」→ `_title_is_main` 不认；
+② 主窗标题是**账号昵称**（哦大肥鱼），不是「微信/Weixin」→ `_title_is_main` 不认；
 ④ 顶层类名是 Qt 外壳 `Qt51514QWindowIcon`，不是 `mmui::MainWindow`
    （日志里 gate 明明写成功了：`UIA 树已物化，已记录 gate RVA：Weixin.dll+0xb134c38`，
     说明 mmui 子控件已经长出来了，只是**顶层**没改名）。

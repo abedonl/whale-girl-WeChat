@@ -2,13 +2,13 @@
 'use strict';
 
 /**
- * 模拟微信 / 抖音的网关，往本机的鲸鲸发消息，验证接入链路是否通。
+ * 模拟微信 / 抖音的网关，往本机的大肥鱼发消息，验证接入链路是否通。
  * 不需要真的微信/抖音账号，专门用来联调。
  *
  * 用法：
  *   node scripts/mock-gateway.js                                   # 模拟微信群里被 @
  *   node scripts/mock-gateway.js --platform=douyin                 # 模拟抖音群消息
- *   node scripts/mock-gateway.js --text="鲸鲸在吗" --user=海胆酱     # 自定义内容
+ *   node scripts/mock-gateway.js --text="大肥鱼在吗" --user=海胆酱     # 自定义内容
  *   node scripts/mock-gateway.js --demo                            # 连发几条，看群聊规则
  *   node scripts/mock-gateway.js --private                         # 私聊消息
  */
@@ -19,7 +19,7 @@ const http = require('node:http');
 const ROOT = path.resolve(__dirname, '..');
 
 function parseArgs(argv) {
-  const out = { platform: 'wechat', user: '阿螈', text: '@鲸鲸 在吗', group: true, demo: false, token: '', url: '', port: 0 };
+  const out = { platform: 'wechat', user: '阿螈', text: '@大肥鱼 在吗', group: true, demo: false, token: '', url: '', port: 0 };
   for (const raw of argv.slice(2)) {
     const m = raw.match(/^--([^=]+)(?:=(.*))?$/);
     if (!m) continue;
@@ -112,12 +112,12 @@ async function main() {
         return data;
       }
       if (data.action === 'ignore') {
-        console.log(`   💤 鲸鲸没接话（${data.reason}）`);
+        console.log(`   💤 大肥鱼没接话（${data.reason}）`);
         return data;
       }
       const bubbles = data.bubbles && data.bubbles.length ? data.bubbles : [data.reply || ''];
       for (const b of bubbles) {
-        if (b) console.log(`   💬 鲸鲸：${b}`);
+        if (b) console.log(`   💬 大肥鱼：${b}`);
       }
       if (data.outbound && data.outbound.dryRun) {
         console.log('   （没配 outboundUrl，所以回复只在你这边显示，不会真的发回微信/抖音）');
@@ -131,11 +131,11 @@ async function main() {
   };
 
   if (opts.demo) {
-    console.log(`\n=== 鲸鲸接入联调（${baseUrl}，平台 ${opts.platform}）===`);
+    console.log(`\n=== 大肥鱼接入联调（${baseUrl}，平台 ${opts.platform}）===`);
     await send('今天加班到十点，人已经麻了', '阿螈');
-    await send('@鲸鲸 你说人为什么要上班啊', '海胆酱');
+    await send('@大肥鱼 你说人为什么要上班啊', '海胆酱');
     await send('哈哈哈哈哈哈哈', '小丑鱼');
-    await send('鲸鲸，安慰我一下', '阿螈');
+    await send('大肥鱼，安慰我一下', '阿螈');
     await send('/memory', '海胆酱');
     console.log('\n=== 联调结束 ===\n');
     return;

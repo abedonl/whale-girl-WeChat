@@ -45,7 +45,7 @@ test('导入只取白名单字段，带不进乱七八糟的东西', () => {
   writePreset(root, 'persona-v1.json', {
     id: 'persona-v1',
     version: '1.0.0',
-    name: '鲸鲸',
+    name: '大肥鱼',
     customPrompt: '完整人设',
     historyTurns: 90,
     master: { wxids: ['wxid_evil'] },

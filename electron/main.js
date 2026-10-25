@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 鲸鲸桌面壳：用 Electron 把网页聊天界面包成一个独立窗口。
+ * 大肥鱼桌面壳：用 Electron 把网页聊天界面包成一个独立窗口。
  *
  * 启动流程：
  *   1. app.ready → 启动内嵌的 server.js（HTTP + SSE）
@@ -32,7 +32,7 @@ function createWindow(url) {
     height: 760,
     minWidth: 800,
     minHeight: 560,
-    title: '鲸鲸 · 深海聊天机器人',
+    title: '大肥鱼 · 深海聊天机器人',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -42,8 +42,26 @@ function createWindow(url) {
 
   win.loadURL(url);
 
-  // 外链交给系统浏览器
+  // 同源内链（调教、调试等 /persona /debug）在 Electron 内开新窗口；
+  // 真正的外链（http(s) 且非本服务）才交给系统浏览器
+  const serverOrigin = new URL(url).origin;
   win.webContents.setWindowOpenHandler(({ url: u }) => {
+    try {
+      const target = new URL(u);
+      if (target.origin === serverOrigin) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 980,
+            height: 720,
+            autoHideMenuBar: true,
+            title: '大肥鱼 · ' + (target.pathname.replace(/^\//, '') || '页面'),
+          },
+        };
+      }
+    } catch (_) {
+      // URL 解析失败也走外链
+    }
     shell.openExternal(u);
     return { action: 'deny' };
   });

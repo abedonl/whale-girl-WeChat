@@ -64,7 +64,20 @@ class DeepSeekClient {
   constructor({ config, logger }) {
     this.config = config;
     this.logger = logger;
+    this._inflight = 0;      // 当前在途请求数
+    this._queue = [];        // 排队中的 resolve
+    this._maxInflight = 2;   // 并发上限：聊天+主动消息同时打会把自己限流
     this.reload();
+  }
+
+  _acquireSlot() {
+    if (this._inflight < this._maxInflight) { this._inflight++; return Promise.resolve(); }
+    return new Promise((r) => this._queue.push(r));
+  }
+
+  _releaseSlot() {
+    const next = this._queue.shift();
+    if (next) next(); else this._inflight--;
   }
 
   /** 设置面板保存后调用，立即生效，无需重启 */
@@ -262,20 +275,39 @@ class DeepSeekClient {
   /** 非流式，返回完整文本 */
   async complete({ system, turns, maxTokens }) {
     let lastErr = null;
+    let switched = false; // 连续空回复后已切过备用服务商
+    let bumped = false;   // finish_reason=length 时已放大过 maxTokens
+    let rateLimited = 0;  // 429 次数：限流时加长退避，多给几轮机会
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
+        await this._acquireSlot();
+        let res;
         const payload = this.buildPayload({ system, turns, stream: false, maxTokens });
-        const { res } = await this._open(payload, { stream: false });
+        try {
+          ({ res } = await this._open(payload, { stream: false }));
+        } finally {
+          this._releaseSlot();
+        }
         if (res.statusCode !== 200) throw await this._errorFrom(res);
         const raw = await this._readAll(res);
         let json;
         try {
           json = JSON.parse(raw);
         } catch {
-          throw new LlmError(FRIENDLY.empty, { code: 'bad_json', detail: 'invalid json: ' + raw.slice(0, 200) });
+          throw new LlmError(FRIENDLY.empty, { code: 'bad_json', retryable: true, detail: 'invalid json: ' + raw.slice(0, 200) });
         }
         const text = json?.choices?.[0]?.message?.content;
-        if (!text || !String(text).trim()) throw new LlmError(FRIENDLY.empty, { code: 'empty' });
+        if (!text || !String(text).trim()) {
+          const finish = json?.choices?.[0]?.finish_reason;
+          // 推理模型把 token 预算全花在思考上时 content 会空：放大 maxTokens 重来一轮
+          if (finish === 'length' && !bumped) {
+            bumped = true;
+            maxTokens = Math.min((Number(maxTokens) || this.maxTokens) * 2, 2048);
+            attempt = -1;
+            continue;
+          }
+          throw new LlmError(FRIENDLY.empty, { code: 'empty', retryable: true, detail: 'empty content, finish_reason=' + finish });
+        }
         this.logger &&
           this.logger.debug(
             `DeepSeek 完成：${payload.messages.length} 条消息，输出 ${String(text).length} 字`
@@ -284,6 +316,27 @@ class DeepSeekClient {
       } catch (err) {
         lastErr = err;
         const llmErr = err instanceof LlmError ? err : new LlmError(FRIENDLY.default, { detail: String(err && err.message) });
+        // 限流（429）：退避时间逐轮加长 2s→5s→10s；第三轮还没过就试备用服务商
+        if (llmErr.status === 429 && rateLimited < 3) {
+          rateLimited += 1;
+          if (rateLimited === 3 && !switched) {
+            const sw = this.switchFallback();
+            if (sw) { switched = true; attempt = -1; await sleep(500); continue; }
+          }
+          attempt = -1;
+          await sleep(rateLimited === 1 ? 2000 : rateLimited === 2 ? 5000 : 10000);
+          continue;
+        }
+        // 两轮都吐空泡：换备用服务商再试一轮（有存过 Key 的话）
+        if ((llmErr.code === 'empty' || llmErr.code === 'bad_json') && attempt === 1 && !switched) {
+          const sw = this.switchFallback();
+          if (sw) {
+            switched = true;
+            attempt = -1;
+            await sleep(300);
+            continue;
+          }
+        }
         if (!llmErr.retryable || attempt === 1 || llmErr.code === 'aborted') throw llmErr;
         await sleep(700);
       }

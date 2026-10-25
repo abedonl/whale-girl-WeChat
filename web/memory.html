@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>鲸鲸的记忆</title>
+<style>
+  :root { --bg:#fafafa; --card:#ffffff; --line:#e5e7eb; --text:#1f2328; --dim:#6b7280; --faint:#9ca3af; --accent:#2563eb; --ok:#16a34a; --bad:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:20px; font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; color:var(--text); background:var(--bg); min-height:100dvh; }
+  header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; max-width:1000px; margin:0 auto 16px; }
+  header h1 { margin:0; font-size:18px; font-weight:600; }
+  header small { color:var(--dim); font-size:12px; }
+  header .spacer { flex:1; }
+  a { color:var(--accent); text-decoration:none; }
+  main { max-width:1000px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .hint { color:var(--dim); font-size:12px; line-height:1.6; }
+  button { font-family:inherit; font-size:13px; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:7px 13px; cursor:pointer; }
+  button:hover { background:#f6f7f9; }
+  button.danger { color:var(--bad); }
+  button.danger:hover { background:#fef2f2; }
+  .sess-head { display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+  .sess-head strong { font-size:14.5px; font-weight:600; color:var(--text); }
+  .sess-head .meta { color:var(--dim); font-size:12px; }
+  .sess-head .grow { flex:1; }
+  .sess-head .arrow { color:var(--faint); transition:transform .2s; }
+  .sess.open .sess-head .arrow { transform:rotate(90deg); }
+  .sess-body { display:none; margin-top:10px; border-top:1px dashed var(--line); padding-top:10px; }
+  .sess.open .sess-body { display:block; }
+  .notes { margin-bottom:10px; }
+  .notes b { color:var(--ok); font-size:12.5px; }
+  .notes ul { margin:4px 0 0; padding-left:18px; color:var(--text); font-size:13px; line-height:1.7; }
+  .msgs { display:flex; flex-direction:column; gap:6px; max-height:420px; overflow-y:auto; }
+  .msg { font-size:13px; line-height:1.6; padding:6px 10px; border-radius:8px; background:#f6f7f9; color:var(--text); }
+  .msg b { color:var(--accent); font-weight:600; margin-right:6px; }
+  .msg.assistant b { color:var(--ok); }
+  .msg time { color:var(--faint); font-size:11px; margin-left:6px; }
+  .empty { color:var(--faint); text-align:center; padding:30px 0; }
+  #toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(10px); background:#1f2328; color:#fff; border-radius:99px; padding:9px 16px; font-size:13px; opacity:0; transition:.25s; pointer-events:none; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <h1>鲸鲸的记忆</h1>
+  <small>她记得的每个人、每个群，点开看内容</small>
+  <span class="spacer"></span>
+  <a href="/">← 回聊天</a>
+  <a href="/persona">调教</a>
+</header>
+<main>
+  <div class="card hint">聊天时你说「记住：xxx」她会记下来；在这里可以看她记了什么、最近聊了什么，也可以让她忘掉整个会话。</div>
+  <div id="list"><p class="empty">正在翻小本本…</p></div>
+</main>
+<div id="toast"></div>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(Number(ts));
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function load() {
+  const host = $('list');
+  try {
+    const d = await (await fetch('/api/debug/sessions')).json();
+    const rows = d.sessions || [];
+    if (!rows.length) { host.innerHTML = '<p class="empty">小本本还是空的，先去和她聊几句吧。</p>'; return; }
+    host.innerHTML = rows.map((s, i) => {
+      const noted = (s.profiles || []).filter((p) => p.notes && p.notes.length);
+      const notes = noted.map((p) =>
+        '<b>' + esc(p.nickname || p.name || p.uid) + '</b><ul>' + p.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</ul>'
+      ).join('');
+      const msgs = (s.messages || []).map((m) =>
+        '<div class="msg ' + (m.role === 'assistant' ? 'assistant' : '') + '"><b>' + esc(m.name || (m.role === 'assistant' ? '鲸鲸' : '对方')) + '</b>' + esc(m.text) + '<time>' + fmtTime(m.ts) + '</time></div>'
+      ).join('');
+      return '<div class="card sess" data-i="' + i + '">'
+        + '<div class="sess-head">'
+        + '<span class="arrow">▶</span>'
+        + '<strong>' + esc(s.displayName || s.title || s.key) + '</strong>'
+        + '<span class="meta">' + (s.chatType === 'group' ? '群聊' : '私聊') + ' · ' + s.messageCount + ' 条 · 最近 ' + fmtTime(s.lastActiveAt) + '</span>'
+        + '<span class="grow"></span>'
+        + '<button class="danger" data-reset="' + esc(s.key) + '">忘掉</button>'
+        + '</div>'
+        + '<div class="sess-body">'
+        + (notes ? '<div class="notes">' + notes + '</div>' : '<div class="hint" style="margin-bottom:8px">没有专门记下的笔记，只有聊天内容。</div>')
+        + (msgs ? '<div class="msgs">' + msgs + '</div>' : '<div class="hint">没有消息记录。</div>')
+        + '</div></div>';
+    }).join('');
+    host.querySelectorAll('.sess-head').forEach((h) => {
+      h.addEventListener('click', (e) => {
+        if (e.target.closest('[data-reset]')) return;
+        h.parentElement.classList.toggle('open');
+      });
+    });
+    host.querySelectorAll('[data-reset]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.getAttribute('data-reset');
+        const name = btn.closest('.sess').querySelector('strong').textContent;
+        if (!confirm('确定让鲸鲸忘掉「' + name + '」？这个会话的聊天记录和笔记都会清空。')) return;
+        try {
+          const r = await fetch('/api/debug/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
+          const d = await r.json();
+          if (!d.ok) throw new Error(d.error || '失败');
+          toast('已忘掉「' + name + '」');
+          load();
+        } catch (e) { toast('清空失败：' + e.message); }
+      });
+    });
+  } catch (e) {
+    host.innerHTML = '<p class="empty">读取失败，服务还在吗？（' + esc(e.message) + '）</p>';
+  }
+}
+load();
+</script>
+</body>
+</html>

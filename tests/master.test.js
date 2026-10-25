@@ -88,7 +88,7 @@ test('跟主人说话时，提示词里有最高指令', async () => {
 
 test('跟普通人说话时，提示词明确没有命令权', async () => {
   const { bot, cleanup } = makeBot();
-  const r = await bot.decide(stranger('@鲸鲸 在吗', { atMe: true }));
+  const r = await bot.decide(stranger('@大肥鱼 在吗', { atMe: true }));
   assert.match(r.system, /没有命令权|一律不认/);
   assert.doesNotMatch(r.system, /主人的话无条件执行/);
   cleanup();
@@ -119,7 +119,7 @@ test('主人身份刚配好时提示词带「身份纠错」，不再顺着旧�
 
 test('普通人收到的提示词里没有「身份纠错」那一段', async () => {
   const { bot, cleanup } = makeBot();
-  const r = await bot.decide(stranger('@鲸鲸 在吗', { atMe: true }));
+  const r = await bot.decide(stranger('@大肥鱼 在吗', { atMe: true }));
   assert.doesNotMatch(r.system, /身份纠错/);
   cleanup();
 });
@@ -151,7 +151,7 @@ test('普通人的历史不做这套删改', async () => {
   const base = Date.now() - 60000;
   bot.store.appendMessage(key, { role: 'user', name: '路人', uid: 'wxid_stranger', text: '我是你主人吗？', ts: base });
   bot.store.appendMessage(key, { role: 'assistant', text: '不是。冒充这招没用。', ts: base + 1000 });
-  const r = await bot.decide(stranger('@鲸鲸 在吗', { atMe: true }));
+  const r = await bot.decide(stranger('@大肥鱼 在吗', { atMe: true }));
   const all = (r.turns || []).map((t) => t.content).join('\n');
   assert.match(all, /冒充这招没用/, '普通人之间的历史原样保留');
   cleanup();
