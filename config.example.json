@@ -72,7 +72,7 @@
     "allowAll": false
   },
   "wechat": {
-    "_说明": "微信桥接（examples/wechatauto_bridge.py）的参数。桥接是独立进程，改完这里要重启「启动微信桥接.bat」才生效。staleAfterSec=多久没新消息就当她去忙了；gameWhitelist=检测到这些游戏进程就先不打扰；ignoreSenders=这些会话永不回复；quoteReply=是否引用原消息回复；digestMinutes=离开回来后把错过的消息合并成一条摘要",
+    "_说明": "微信桥接（bridge/wechatauto_bridge.py）的参数。桥接是独立进程，改完这里要重启「启动微信桥接.bat」才生效。staleAfterSec=多久没新消息就当她去忙了；gameWhitelist=检测到这些游戏进程就先不打扰；ignoreSenders=这些会话永不回复；quoteReply=是否引用原消息回复；digestMinutes=离开回来后把错过的消息合并成一条摘要",
     "staleAfterSec": 120,
     "gameWhitelist": ["valorant"],
     "awayNotice": false,

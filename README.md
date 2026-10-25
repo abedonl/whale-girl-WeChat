@@ -51,7 +51,7 @@ untime\ffmpeg\bin 等）；**没有 ffmpeg 就看不了图**，日志里会写�
 - **群管理**：禁言群、解禁、改模型、切语气、清记忆、低电量自动发晚安
 - **全局热键**：PageUp 一键终止服务和桥接，PageDown 恢复（`启动热键.bat`）
 - **一键终止所有**：`一键终止.bat`，服务、桥接、守护、热键全部停掉并写暂停标记
-- **微信桥接**：`examples/wechatauto_bridge.py`，基于 `wechatauto-replica` 的 UI 自动化（只读数据库 + 窗口操作，**不注入微信**）
+- **微信桥接**：`bridge/wechatauto_bridge.py`，基于 `wechatauto-replica` 的 UI 自动化（只读数据库 + 窗口操作，**不注入微信**）
 - **零 npm 依赖**：不用 `npm install`；带 `runtime\` 的发行包连 Node 都不用装（本仓库是源码版，不带 `runtime\`）
 
 ---
@@ -96,7 +96,7 @@ npm start
 
 ```bash
 py -3.12 -m pip install -r requirements.txt
-python examples/wechatauto_bridge.py
+python bridge/wechatauto_bridge.py
 ```
 
 然后：
@@ -244,7 +244,7 @@ whale-girl/
 │  └─ config.js / personaStore.js
 ├─ web/                      # 聊天页、调教台、调试台
 ├─ personas/                 # 人设预设，一个版本一个文件（persona-v1.json…）
-├─ examples/
+├─ bridge/
 │  ├─ wechatauto_bridge.py   # 微信桥接（UI 自动化）
 │  └─ wechaty-bridge.js      # 另一种桥接示例
 ├─ scripts/                  # 启动/守护脚本

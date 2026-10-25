@@ -10,7 +10,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const visionSrc = fs.readFileSync(path.join(root, 'src', 'vision.js'), 'utf8');
-const bridgeSrc = fs.readFileSync(path.join(root, 'examples', 'wechatauto_bridge.py'), 'utf8');
+const bridgeSrc = fs.readFileSync(path.join(root, 'bridge', 'wechatauto_bridge.py'), 'utf8');
 
 test('视觉提示词要求逐条转写，并且分清左右气泡', () => {
   assert.match(visionSrc, /对方：/, '要教它标「对方：」');

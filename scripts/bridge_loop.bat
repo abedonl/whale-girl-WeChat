@@ -10,7 +10,7 @@ if exist "data\PAUSED" (
 )
 echo.
 echo [%date% %time%] 启动微信桥接…
-"%PY%" -u "examples\wechatauto_bridge.py"
+"%PY%" -u "bridge\wechatauto_bridge.py"
 echo [%date% %time%] 桥接退出（code=%ERRORLEVEL%），3 秒后自动重启…
 timeout /t 3 /nobreak >nul
 goto loop

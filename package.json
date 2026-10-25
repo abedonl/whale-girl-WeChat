@@ -3,15 +3,12 @@
     "version": "3.0.4",
     "private": false,
     "description": "大肥鱼 —— 可接微信群 / 主动消息的 DeepSeek 鲸鱼娘聊天机器人",
-    "main": "electron/main.js",
     "type": "commonjs",
     "scripts": {
-        "start": "electron .",
         "server": "node server.js",
         "doctor": "node server.js --doctor",
         "test": "node --test \"tests/*.test.js\"",
-        "release-check": "node scripts/release-check.js --release",
-        "dist": "electron-builder --win portable"
+        "release-check": "node scripts/release-check.js --release"
     },
     "engines": {
         "node": ">=18"
@@ -27,45 +24,7 @@
     "author": "",
     "repository": {
         "type": "git",
-        "url": ""
+        "url": "https://github.com/abedonl/whale-girl-WeChat"
     },
-    "devDependencies": {
-        "electron": "^45.0.0",
-        "electron-builder": "^26.18.0"
-    },
-    "build": {
-        "appId": "com.whalegirl.bot",
-        "productName": "大肥鱼",
-        "directories": {
-            "output": "release2"
-        },
-        "asar": false,
-        "files": [
-            "server.js",
-            "package.json",
-            "src/**/*",
-            "web/**/*",
-            "electron/**/*",
-            "personas/**/*",
-            "resources/**/*",
-            "examples/**/*",
-            "scripts/**/*",
-            "docs/**/*",
-            "config.example.json",
-            "requirements.txt",
-            "*.md",
-            "*.bat"
-        ],
-        "win": {
-            "target": [
-                {
-                    "target": "portable",
-                    "arch": ["x64"]
-                }
-            ]
-        },
-        "portable": {
-            "artifactName": "大肥鱼-${version}-portable.exe"
-        }
-    }
+    "devDependencies": {}
 }

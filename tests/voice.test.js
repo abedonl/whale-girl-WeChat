@@ -11,7 +11,7 @@ const path = require('node:path');
 const { DEFAULT_CONFIG } = require('../src/config');
 
 const root = path.resolve(__dirname, '..');
-const bridge = fs.readFileSync(path.join(root, 'examples', 'wechatauto_bridge.py'), 'utf8');
+const bridge = fs.readFileSync(path.join(root, 'bridge', 'wechatauto_bridge.py'), 'utf8');
 
 test('默认配置里有 voice，并且默认开启', () => {
   assert.ok(DEFAULT_CONFIG.voice, '缺少 voice 配置块');

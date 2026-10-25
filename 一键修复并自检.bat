@@ -39,7 +39,7 @@ echo  Please close the WeChat-bridge console window first.
 echo ============================================================
 echo.
 
-"%~dp0runtime\python\python.exe" -u "%~dp0examples\uia_selftest.py"
+"%~dp0runtime\python\python.exe" -u "%~dp0bridge\uia_selftest.py"
 
 echo.
 echo ============================================================

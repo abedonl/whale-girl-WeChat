@@ -14,7 +14,7 @@
   4. config.json 里 gateway.wechat.enabled = true（脚本会读 token）
 
 用法：
-  python examples/wechatauto_bridge.py
+  python bridge/wechatauto_bridge.py
 
 注意：
   - 发送消息会抢微信窗口焦点，这是 4.x 自动化的正常表现。
@@ -364,7 +364,7 @@ def main():
         # 发送都跳过 UIA、掉进会卡死在截屏里的 OCR 兜底。补丁见 uia_compat.py。
         # 包里自带的 Python 开了 safe_path（sys.flags.safe_path=True，sys.path[0]
         # 是 python312.zip 而不是脚本目录），所以同目录的 uia_compat 直接 import 会
-        # ModuleNotFoundError。这里显式把 examples 目录塞进 sys.path；再不行就按
+        # ModuleNotFoundError。这里显式把 bridge 目录塞进 sys.path；再不行就按
         # 文件路径加载（双保险）。
         _here = os.path.dirname(os.path.abspath(__file__))
         if _here not in sys.path:

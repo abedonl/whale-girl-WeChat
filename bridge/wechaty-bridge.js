@@ -10,7 +10,7 @@
  *   npm install wechaty qrcode-terminal
  *   set WECHATY_PUPPET=wechaty-puppet-padlocal
  *   set WECHATY_PUPPET_PADLOCAL_TOKEN=你的 token
- *   node examples/wechaty-bridge.js
+ *   node bridge/wechaty-bridge.js
  *
  * 注意：
  *   - 这是一个「模板」，不同 puppet 的 API 细节可能不同，需要微调。

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * 微信桥接进程管理：从桌面端一键拉起 examples/wechatauto_bridge.py。
+ * 微信桥接进程管理：从桌面端一键拉起 bridge/wechatauto_bridge.py。
  *
  * 使用前提：
  *   - 本机装有 Python 3.10+（py 或 python 任一可用）
@@ -105,9 +105,9 @@ async function start({ root, port, logger }) {
   if (child && !child.killed) {
     return { ok: true, already: true, status: status() };
   }
-  const script = path.join(root, 'examples', 'wechatauto_bridge.py');
+  const script = path.join(root, 'bridge', 'wechatauto_bridge.py');
   if (!fs.existsSync(script)) {
-    lastError = '找不到 examples/wechatauto_bridge.py';
+    lastError = '找不到 bridge/wechatauto_bridge.py';
     return { ok: false, error: lastError };
   }
   const py = await detectPython(root);

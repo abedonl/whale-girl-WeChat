@@ -39,7 +39,7 @@ echo.
 echo   Python: %PY%
 echo.
 
-"%PY%" -u "%~dp0examples\wechatauto_bridge.py"
+"%PY%" -u "%~dp0bridge\wechatauto_bridge.py"
 set "CODE=%ERRORLEVEL%"
 echo.
 echo Bridge exited with code %CODE%.

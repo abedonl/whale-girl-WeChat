@@ -67,7 +67,7 @@ mustInclude('src/master.js', [['判定函数', 'matchMaster']]);
 mustInclude('src/bot.js', [['剔除身份争执', 'stripMasterDispute']]);
 
 // 3) UIA 可诊断
-mustInclude('examples/wechatauto_bridge.py', [
+mustInclude('bridge/wechatauto_bridge.py', [
   ['ffmpeg 自检', 'ensure_ffmpeg_env'],
   ['wxgf 转码', '_wxgf_to_jpg'],
   ['失败原因解释', 'explain_uia_failure'],

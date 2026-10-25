@@ -18,7 +18,7 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "examples"))
+sys.path.insert(0, os.path.join(ROOT, "bridge"))
 
 
 def hr(title):
